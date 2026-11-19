@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistem Pengurusan Data Kokurikulum SK Beserah</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; color: #0f172a; }
+    .tab-active { background-color: #1e3a8a; color: #ffffff; box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25); }
+    .tab-inactive { color: #475569; background-color: transparent; }
+    .tab-inactive:hover { background-color: #e2e8f0; color: #0f172a; }
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea {
+        position: fixed; left: 0; top: 0; width: 100%; margin: 0; padding: 12mm;
+        background: white !important; box-shadow: none !important;
+      }
+      .no-print { display: none !important; }
+      @page { size: A4 portrait; margin: 8mm; }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- HEADER RASMI SEKOLAH -->
+  <header class="bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-900 text-white shadow-lg border-b-4 border-amber-400">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col lg:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-4 text-center sm:text-left">
+        <div id="schoolLogoContainer" class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white p-1.5 shadow-md flex items-center justify-center shrink-0 overflow-hidden border-2 border-amber-300">
+          <!-- Default SVG Crest SK Beserah -->
+          <svg id="defaultSchoolLogo" viewBox="0 0 120 120" class="w-full h-full">
+            <defs>
+              <linearGradient id="shieldGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#1e3a8a"/>
+                <stop offset="100%" stop-color="#1d4ed8"/>
+              </linearGradient>
+            </defs>
+            <path d="M60 6 L108 24 L102 74 C98 96 60 114 60 114 C60 114 22 96 18 74 L12 24 Z" fill="url(#shieldGrad)" stroke="#f59e0b" stroke-width="5"/>
+            <path d="M60 16 L98 30 L93 70 C90 88 60 103 60 103 C60 103 30 88 27 70 L22 30 Z" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.5"/>
+            <circle cx="60" cy="44" r="14" fill="#fbbf24"/>
+            <path d="M36 68 Q60 58 84 68 L80 82 Q60 74 40 82 Z" fill="#ffffff"/>
+            <text x="60" y="96" text-anchor="middle" fill="#fde68a" font-size="11" font-weight="800" font-family="sans-serif">SKB</text>
+          </svg>
+          <img id="customSchoolLogoImg" src="" alt="Logo Sekolah" class="hidden w-full h-full object-contain" />
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+            <span class="px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider bg-amber-400 text-blue-950 rounded-full">Portal Rasmi Kokurikulum</span>
+            <span id="headerSessionBadge" class="px-2.5 py-0.5 text-[11px] font-semibold bg-blue-800/80 text-blue-100 rounded-full border border-blue-700">Sesi 2026</span>
+          </div>
+          <h1 id="systemTitleDisplay" class="text-xl sm:text-2xl font-extrabold tracking-tight mt-1 text-white">Sistem Pengurusan Data Kokurikulum SK Beserah</h1>
+          <p id="systemSubtitleDisplay" class="text-xs sm:text-sm text-blue-200 mt-0.5">Sekolah Kebangsaan Beserah, 26100 Kuantan, Pahang Darul Makmur</p>
+        </div>
+      </div>
+
+      <!-- KAWALAN ADMIN -->
+      <div class="flex flex-wrap items-center justify-center gap-2.5">
+        <div id="adminStatusBadge" class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900/60 border border-slate-600 text-amber-300">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+          <span>Mod Paparan Sahaja</span>
+        </div>
+        <button id="adminToggleBtn" onclick="handleAdminToggle()" class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-blue-950 shadow transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          <span id="adminToggleText">Buka Mod Admin</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVIGASI UTAMA -->
+  <nav class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center gap-1.5 overflow-x-auto">
+      <button onclick="switchTab('dashboard')" id="nav-dashboard" class="tab-btn tab-active px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition">Papan Pemuka & Laporan</button>
+      <button onclick="switchTab('students')" id="nav-students" class="tab-btn tab-inactive px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition">Data Murid & Carian</button>
+      <button onclick="switchTab('units')" id="nav-units" class="tab-btn tab-inactive px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition">Unit & Guru Penasihat</button>
+      <button onclick="switchTab('attendance')" id="nav-attendance" class="tab-btn tab-inactive px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition">Kehadiran Murid</button>
+      <button onclick="switchTab('opr')" id="nav-opr" class="tab-btn tab-inactive px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition">Laporan Mingguan (OPR)</button>
+      <button onclick="switchTab('settings')" id="nav-settings" class="tab-btn tab-inactive px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold whitespace-nowrap transition">Tetapan Admin & Kelas</button>
+    </div>
+  </nav>
+
+  <!-- KANDUNGAN UTAMA -->
+  <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex-1 space-y-6">
+
+    <!-- TAB 1: PAPAN PEMUKA & LAPORAN -->
+    <section id="tab-dashboard" class="tab-section space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Jumlah Murid Berdaftar</p>
+          <p id="kpiTotalStudents" class="text-3xl font-extrabold text-blue-900 mt-1">0</p>
+          <p id="kpiTotalClasses" class="text-xs text-slate-500 mt-1">Merangkumi 12 kelas aktif</p>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Unit Kokurikulum</p>
+          <p id="kpiTotalUnits" class="text-3xl font-extrabold text-indigo-700 mt-1">25</p>
+          <p class="text-xs text-slate-500 mt-1">7 Beruniform • 13 Kelab • 5 Sukan</p>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Purata Kehadiran</p>
+          <p id="kpiAvgAttendance" class="text-3xl font-extrabold text-emerald-600 mt-1">100%</p>
+          <p id="kpiAttendanceSessions" class="text-xs text-slate-500 mt-1">Rekod mingguan direkodkan</p>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Laporan Mingguan (OPR)</p>
+          <p id="kpiTotalOpr" class="text-3xl font-extrabold text-amber-600 mt-1">0</p>
+          <p class="text-xs text-slate-500 mt-1">Dokumen OPR sedia cetak</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Pecahan Mengikut Kelas -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-base font-extrabold text-slate-800">Enrolmen Murid Mengikut Kelas</h2>
+            <button onclick="exportSummaryCSV()" class="px-3 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition">Eksport CSV</button>
+          </div>
+          <div id="classBreakdownList" class="space-y-2.5 max-h-96 overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- Statistik Keahlian Unit -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+            <h2 class="text-base font-extrabold text-slate-800">Bilangan Ahli Setiap Unit</h2>
+            <select id="dashCategoryFilter" onchange="renderDashboard()" class="text-xs font-bold border border-slate-300 rounded-lg px-2.5 py-1.5 bg-slate-50">
+              <option value="ALL">Semua Kategori (25 Unit)</option>
+              <option value="UB">Unit Beruniform (7)</option>
+              <option value="KP">Kelab & Persatuan (13)</option>
+              <option value="SP">Sukan & Permainan (5)</option>
+            </select>
+          </div>
+          <div id="unitBreakdownList" class="space-y-2.5 max-h-96 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: DATA MURID & CARIAN -->
+    <section id="tab-students" class="tab-section hidden space-y-5">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-extrabold text-slate-800">Senarai & Carian Murid Kokurikulum</h2>
+            <p class="text-xs text-slate-500">Klik pada nama murid untuk memaparkan & mencetak Kad Profil Kokurikulum Rasmi.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="admin-only-control cursor-pointer px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition flex items-center gap-1.5">
+              <span>Import Excel / CSV</span>
+              <input type="file" accept=".xlsx,.xls,.csv" onchange="handleExcelImport(event)" class="hidden" />
+            </label>
+            <button onclick="openStudentModal()" class="admin-only-control px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-900 hover:bg-blue-800 text-white transition">+ Daftar Murid</button>
+            <button onclick="exportStudentsCSV()" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Eksport CSV</button>
+          </div>
+        </div>
+
+        <!-- Penapis Carian -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <input type="text" id="searchStudentInput" oninput="renderStudentsTable()" placeholder="Cari nama atau No. Pengenalan..." class="lg:col-span-2 px-3.5 py-2 text-xs font-medium border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <select id="filterClassSelect" onchange="renderStudentsTable()" class="px-3 py-2 text-xs font-bold border border-slate-300 rounded-xl bg-white">
+            <option value="">Semua Kelas</option>
+          </select>
+          <select id="filterUbSelect" onchange="renderStudentsTable()" class="px-3 py-2 text-xs font-bold border border-slate-300 rounded-xl bg-white">
+            <option value="">Semua Unit Beruniform</option>
+          </select>
+          <select id="filterKpSpSelect" onchange="renderStudentsTable()" class="px-3 py-2 text-xs font-bold border border-slate-300 rounded-xl bg-white">
+            <option value="">Semua Kelab / Sukan</option>
+          </select>
+        </div>
+
+        <div class="text-xs font-semibold text-slate-500 flex justify-between items-center">
+          <span id="studentCountLabel">Memaparkan 0 murid</span>
+          <button onclick="resetStudentFilters()" class="text-blue-700 hover:underline font-bold">Set Semula Carian</button>
+        </div>
+
+        <!-- Jadual Murid -->
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 text-[11px] uppercase tracking-wider border-b border-slate-200">
+                <th class="py-3 px-3 font-extrabold w-12">Bil</th>
+                <th class="py-3 px-3 font-extrabold">Nama Murid</th>
+                <th class="py-3 px-3 font-extrabold">Kelas</th>
+                <th class="py-3 px-3 font-extrabold">Unit Beruniform</th>
+                <th class="py-3 px-3 font-extrabold">Kelab & Persatuan</th>
+                <th class="py-3 px-3 font-extrabold">Sukan & Permainan</th>
+                <th class="py-3 px-3 font-extrabold text-right">Tindakan</th>
+              </tr>
+            </thead>
+            <tbody id="studentsTableBody" class="divide-y divide-slate-100 text-xs"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: UNIT & GURU PENASIHAT -->
+    <section id="tab-units" class="tab-section hidden space-y-6">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-extrabold text-slate-800">Direktori Guru Penasihat & Senarai Unit</h2>
+            <p class="text-xs text-slate-500">Uruskan jawatankuasa guru penasihat bagi setiap Unit Beruniform, Kelab/Persatuan, dan Sukan.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="openTeacherModal()" class="admin-only-control px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-900 hover:bg-blue-800 text-white transition">+ Tambah Guru Penasihat</button>
+            <button onclick="exportTeachersCSV()" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Eksport Senarai Guru</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <input type="text" id="searchTeacherInput" oninput="renderTeachersSection()" placeholder="Cari nama guru atau unit..." class="px-3.5 py-2 text-xs font-medium border border-slate-300 rounded-xl" />
+          <select id="filterTeacherCat" onchange="renderTeachersSection()" class="px-3 py-2 text-xs font-bold border border-slate-300 rounded-xl bg-white">
+            <option value="">Semua Kategori</option>
+            <option value="Unit Beruniform">Unit Beruniform</option>
+            <option value="Kelab & Persatuan">Kelab & Persatuan</option>
+            <option value="Sukan & Permainan">Sukan & Permainan</option>
+          </select>
+          <select id="filterTeacherUnit" onchange="renderTeachersSection()" class="px-3 py-2 text-xs font-bold border border-slate-300 rounded-xl bg-white">
+            <option value="">Semua Unit</option>
+          </select>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 text-[11px] uppercase tracking-wider border-b border-slate-200">
+                <th class="py-3 px-3 font-extrabold w-12">Bil</th>
+                <th class="py-3 px-3 font-extrabold">Nama Guru Penasihat</th>
+                <th class="py-3 px-3 font-extrabold">Jawatan</th>
+                <th class="py-3 px-3 font-extrabold">Kategori</th>
+                <th class="py-3 px-3 font-extrabold">Unit Kokurikulum</th>
+                <th class="py-3 px-3 font-extrabold">No. Telefon</th>
+                <th class="py-3 px-3 font-extrabold text-right">Tindakan</th>
+              </tr>
+            </thead>
+            <tbody id="teachersTableBody" class="divide-y divide-slate-100 text-xs"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: KEHADIRAN MURID -->
+    <section id="tab-attendance" class="tab-section hidden space-y-5">
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-extrabold text-slate-800">Rekod Kehadiran Mingguan Kokurikulum</h2>
+            <p class="text-xs text-slate-500">Pilih minggu perjumpaan dan unit untuk menanda kehadiran ahli.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="markAllAttendance('H')" class="admin-only-control px-3 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition">Tanda Semua Hadir</button>
+            <button onclick="saveCurrentAttendance()" class="admin-only-control px-4 py-2 rounded-xl text-xs font-bold bg-blue-900 hover:bg-blue-800 text-white transition">Simpan Kehadiran</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Minggu Perjumpaan</label>
+            <select id="attWeekSelect" onchange="renderAttendanceList()" class="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-xl bg-white"></select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tarikh Perjumpaan</label>
+            <input type="date" id="attDateInput" class="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-xl bg-white" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Pilih Unit Kokurikulum</label>
+            <select id="attUnitSelect" onchange="renderAttendanceList()" class="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-xl bg-white"></select>
+          </div>
+        </div>
+
+        <div id="attendanceSummaryBar" class="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl text-xs font-bold text-blue-900"></div>
+
+        <div class="overflow-x-auto border border-slate-200 rounded-xl">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-100 text-slate-600 text-[11px] uppercase tracking-wider border-b border-slate-200">
+                <th class="py-2.5 px-3 font-extrabold w-12">Bil</th>
+                <th class="py-2.5 px-3 font-extrabold">Nama Murid</th>
+                <th class="py-2.5 px-3 font-extrabold">Kelas</th>
+                <th class="py-2.5 px-3 font-extrabold text-center">Status Kehadiran</th>
+              </tr>
+            </thead>
+            <tbody id="attendanceTableBody" class="divide-y divide-slate-100 text-xs"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: LAPORAN MINGGUAN (ONE PAGE REPORT - OPR) -->
+    <section id="tab-opr" class="tab-section hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Borang OPR -->
+        <div class="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <h2 class="text-lg font-extrabold text-slate-800">Bina Laporan Mingguan (OPR)</h2>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Minggu</label>
+              <select id="oprWeek" onchange="syncOprStats()" class="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-xl bg-white"></select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tarikh</label>
+              <input type="date" id="oprDate" class="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-xl" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Unit Kokurikulum</label>
+            <select id="oprUnit" onchange="syncOprStats()" class="w-full px-3 py-2 text-xs font-bold border border-slate-300 rounded-xl bg-white"></select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Masa</label>
+              <input type="text" id="oprTime" value="2:00 Petang - 4:00 Petang" class="w-full px-3 py-2 text-xs font-medium border border-slate-300 rounded-xl" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tempat</label>
+              <input type="text" id="oprVenue" value="Dataran / Dewan SK Beserah" class="w-full px-3 py-2 text-xs font-medium border border-slate-300 rounded-xl" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tajuk Aktiviti</label>
+            <input type="text" id="oprTitle" placeholder="Contoh: Latihan Kawad Kaki Asas & Ikatan" class="w-full px-3 py-2 text-xs font-medium border border-slate-300 rounded-xl" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Objektif Aktiviti</label>
+            <textarea id="oprObjective" rows="2" placeholder="1. Murid dapat menguasai asas kawad statik..." class="w-full px-3 py-2 text-xs font-medium border border-slate-300 rounded-xl"></textarea>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Ringkasan Aktiviti</label>
+            <textarea id="oprSummary" rows="3" placeholder="Aktiviti dimulakan dengan taklimat guru penasihat..." class="w-full px-3 py-2 text-xs font-medium border border-slate-300 rounded-xl"></textarea>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Kekuatan / Penambahbaikan</label>
+            <input type="text" id="oprReflection" value="Murid menunjukkan komitmen tinggi dan penglibatan aktif sepanjang perjumpaan." class="w-full px-3 py-2 text-xs font-medium border border-slate-300 rounded-xl" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Muat Naik Gambar Aktiviti (Maksimum 3 Keping)</label>
+            <input type="file" accept="image/*" multiple onchange="handleOprImages(event)" class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-800 hover:file:bg-blue-100" />
+          </div>
+          <div class="flex flex-wrap gap-2 pt-2">
+            <button onclick="saveOprReport()" class="admin-only-control flex-1 px-4 py-2.5 rounded-xl text-xs font-bold bg-blue-900 hover:bg-blue-800 text-white transition">Simpan OPR</button>
+            <button onclick="printCurrentOpr()" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-amber-400 hover:bg-amber-300 text-blue-950 transition">Cetak / Simpan PDF</button>
+          </div>
+        </div>
+
+        <!-- Pratonton One Page Report (A4) & Senarai OPR Tersimpan -->
+        <div class="lg:col-span-7 space-y-4">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-extrabold text-slate-800">Pratonton One Page Report (A4)</h3>
+              <span id="oprAutoStatsBadge" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200">Kehadiran Autokira</span>
+            </div>
+            <div id="oprPreviewBox" class="border-2 border-slate-300 rounded-xl p-5 bg-white text-slate-900 space-y-3 text-xs"></div>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <h3 class="text-sm font-extrabold text-slate-800">Arkib Laporan Mingguan (OPR) Tersimpan</h3>
+            <div id="savedOprList" class="space-y-2"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 6: TETAPAN ADMIN & KELAS -->
+    <section id="tab-settings" class="tab-section hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Identiti Sistem & Logo -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <h2 class="text-lg font-extrabold text-slate-800">Identiti Sistem, Logo & PIN Admin</h2>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Nama Sistem</label>
+            <input type="text" id="settingSystemTitle" class="w-full px-3.5 py-2 text-xs font-bold border border-slate-300 rounded-xl" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Subtajuk / Alamat Sekolah</label>
+            <input type="text" id="settingSystemSubtitle" class="w-full px-3.5 py-2 text-xs font-medium border border-slate-300 rounded-xl" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Sesi Persekolahan</label>
+            <input type="text" id="settingSession" class="w-full px-3.5 py-2 text-xs font-bold border border-slate-300 rounded-xl" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Muat Naik Logo Rasmi Sekolah (PNG/JPG)</label>
+            <input type="file" accept="image/*" onchange="handleLogoUpload(event)" class="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-800" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Tukar PIN Admin (Lalai: 2026)</label>
+            <input type="password" id="settingAdminPin" placeholder="Masukkan PIN baharu..." class="w-full px-3.5 py-2 text-xs font-bold border border-slate-300 rounded-xl" />
+          </div>
+          <button onclick="saveSystemSettings()" class="admin-only-control w-full px-4 py-2.5 rounded-xl text-xs font-bold bg-blue-900 hover:bg-blue-800 text-white transition">Simpan Tetapan Identiti & PIN</button>
+        </div>
+
+        <!-- Pengurusan Nama Kelas & Sandaran -->
+        <div class="space-y-6">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div>
+              <h2 class="text-lg font-extrabold text-slate-800">Pengurusan Nama Kelas (Sesi 2026)</h2>
+              <p class="text-xs text-slate-500">Suntingan nama kelas akan dikemas kini secara automatik pada semua rekod murid terlibat.</p>
+            </div>
+            <div class="flex gap-2">
+              <input type="text" id="newClassInput" placeholder="Tambah kelas baharu (cth: 4 IKHLAS)" class="flex-1 px-3.5 py-2 text-xs font-bold border border-slate-300 rounded-xl uppercase" />
+              <button onclick="addNewClass()" class="admin-only-control px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition">+ Tambah</button>
+            </div>
+            <div id="classManagerList" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+          </div>
+
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <h2 class="text-base font-extrabold text-slate-800">Sandaran & Pemulihan Data (JSON)</h2>
+            <p class="text-xs text-slate-500">Muat turun salinan lengkap pangkalan data atau pulihkan semula data asal 2026.</p>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="downloadBackupJSON()" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white transition">Muat Turun Sandaran JSON</button>
+              <label class="admin-only-control cursor-pointer px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-100 hover:bg-blue-200 text-blue-900 transition">
+                <span>Pulih Sandaran JSON</span>
+                <input type="file" accept=".json" onchange="restoreBackupJSON(event)" class="hidden" />
+              </label>
+              <button onclick="resetToDefault2026()" class="admin-only-control px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-100 hover:bg-rose-200 text-rose-800 transition">Set Semula Data Asal 2026</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 no-print">
+    <p class="font-semibold text-slate-700">Unit Kokurikulum Sekolah Kebangsaan Beserah • Sistem Pengurusan Bersepadu</p>
+  </footer>
+
+  <!-- MODAL LOG MASUK PIN ADMIN -->
+  <div id="adminPinModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+      <h3 class="text-lg font-extrabold text-slate-900">Pengesahan Admin Sistem</h3>
+      <p class="text-xs text-slate-500">Masukkan PIN Admin untuk membuka kunci suntingan data. (PIN lalai: <span class="font-bold text-slate-700">2026</span>)</p>
+      <input type="password" id="pinInputField" onkeydown="if(event.key==='Enter') verifyAdminPin()" placeholder="Masukkan PIN..." class="w-full px-4 py-2.5 text-center text-lg font-extrabold tracking-widest border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600" />
+      <p id="pinErrorMsg" class="text-xs font-bold text-rose-600 hidden">PIN tidak sah. Sila cuba lagi.</p>
+      <div class="flex gap-2 pt-1">
+        <button onclick="closeModal('adminPinModal')" class="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">Batal</button>
+        <button onclick="verifyAdminPin()" class="flex-1 py-2.5 rounded-xl text-xs font-bold bg-blue-900 text-white hover:bg-blue-800">Sahkan PIN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TAMBAH / EDIT MURID -->
+  <div id="studentModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <h3 id="studentModalTitle" class="text-lg font-extrabold text-slate-900">Daftar Murid Baharu</h3>
+      <input type="hidden" id="editStudentId" />
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">Nama Penuh Murid</label>
+          <input type="text" id="formStudentName" class="w-full px-3.5 py-2 font-bold border border-slate-300 rounded-xl uppercase" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">Kelas</label>
+            <select id="formStudentClass" class="w-full px-3 py-2 font-bold border border-slate-300 rounded-xl bg-white"></select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">No. Pengenalan / MyKid</label>
+            <input type="text" id="formStudentIc" placeholder="Contoh: 140512065432" class="w-full px-3.5 py-2 font-medium border border-slate-300 rounded-xl" />
+          </div>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">Unit Beruniform</label>
+          <select id="formStudentUb" class="w-full px-3 py-2 font-bold border border-slate-300 rounded-xl bg-white"></select>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">Kelab & Persatuan</label>
+          <select id="formStudentKp" class="w-full px-3 py-2 font-bold border border-slate-300 rounded-xl bg-white"></select>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">Sukan & Permainan</label>
+          <select id="formStudentSp" class="w-full px-3 py-2 font-bold border border-slate-300 rounded-xl bg-white"></select>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeModal('studentModal')" class="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">Batal</button>
+        <button onclick="saveStudentForm()" class="flex-1 py-2.5 rounded-xl text-xs font-bold bg-blue-900 text-white hover:bg-blue-800">Simpan Rekod</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL TAMBAH / EDIT GURU PENASIHAT -->
+  <div id="teacherModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <h3 id="teacherModalTitle" class="text-lg font-extrabold text-slate-900">Tambah Guru Penasihat</h3>
+      <input type="hidden" id="editTeacherId" />
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">Nama Penuh Guru</label>
+          <input type="text" id="formTeacherName" placeholder="Contoh: CIKGU AHMAD BIN ALI" class="w-full px-3.5 py-2 font-bold border border-slate-300 rounded-xl uppercase" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">Jawatan</label>
+            <select id="formTeacherRole" class="w-full px-3 py-2 font-bold border border-slate-300 rounded-xl bg-white">
+              <option value="Ketua Guru Penasihat">Ketua Guru Penasihat</option>
+              <option value="Setiausaha">Setiausaha</option>
+              <option value="Guru Penasihat">Guru Penasihat</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-600 mb-1">No. Telefon</label>
+            <input type="text" id="formTeacherPhone" placeholder="01X-XXXXXXX" class="w-full px-3.5 py-2 font-medium border border-slate-300 rounded-xl" />
+          </div>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">Kategori Kokurikulum</label>
+          <select id="formTeacherCat" onchange="populateTeacherUnitOptions()" class="w-full px-3 py-2 font-bold border border-slate-300 rounded-xl bg-white">
+            <option value="Unit Beruniform">Unit Beruniform</option>
+            <option value="Kelab & Persatuan">Kelab & Persatuan</option>
+            <option value="Sukan & Permainan">Sukan & Permainan</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-bold text-slate-600 mb-1">Unit Kokurikulum</label>
+          <select id="formTeacherUnit" class="w-full px-3 py-2 font-bold border border-slate-300 rounded-xl bg-white"></select>
+        </div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeModal('teacherModal')" class="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">Batal</button>
+        <button onclick="saveTeacherForm()" class="flex-1 py-2.5 rounded-xl text-xs font-bold bg-blue-900 text-white hover:bg-blue-800">Simpan Guru</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL KAD PROFIL MURID (CETAK A4) -->
+  <div id="profileModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-3 no-print">
+        <h3 class="text-base font-extrabold text-slate-900">Kad Profil Kokurikulum Murid</h3>
+        <div class="flex gap-2">
+          <button onclick="printProfileCard()" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-blue-900 text-white hover:bg-blue-800">Cetak Kad Profil</button>
+          <button onclick="closeModal('profileModal')" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700">Tutup</button>
+        </div>
+      </div>
+      <div id="profileCardContent" class="p-4 border-2 border-slate-300 rounded-xl bg-white space-y-4 text-xs"></div>
+    </div>
+  </div>
+
+  <!-- ZON CETAKAN TERSEMBUNYI -->
+  <div id="printArea" class="hidden"></div>
+
+  <script>
+    // DATA ASAL 2026 (386 MURID SEBENAR SK BESERAH)
+    const RAW_DATA_2026 = {"c":["4 IHKAM","4 ILTIZAM","4 ITQAN","5 IHKAM","5 IKHLAS","5 ILTIZAM","5 ITQAN","6 IHKAM","6 IKHLAS","6 ILTIZAM","6 ITQAN","PRA SEKOLAH"],"u":["","BSMM (Bulan Sabit Merah Malaysia)","Bomba Junior","Kelip-Kelip (Prasekolah)","PPIM (Pergerakan Puteri Islam Malaysia)","Pandu Puteri Tunas (PPT)","Pengakap","TKRS (Tunas Kadet Remaja Sekolah)"],"k":["","Kelab Bahasa Arab","Kelab Bahasa Inggeris","Kelab Bahasa Melayu","Kelab Bimbingan & Kerjaya","Kelab Doktor Muda","Kelab NILAM dan TVPSS","Kelab Pencegahan Jenayah","Kelab Pencinta Alam","Kelab Robotik","Kelab Rukun Negara","Kelab STEM","Kelab Seni Tari & Kebudayaan","Persatuan Pendidikan Islam"],"s":["","Bola Baling","Bola Jaring","Bola Sepak","Catur","Ragbi Sentuh"],"r":[["AHMAD ASLAM DZUBARI BIN MOHD YUZIR",0,2,6,5],["AHMAD HANZHOLAH BIN AHMAD FAWAZ BAIHAQI",0,6,1,1],["ALIF SYAHMI BIN MOHD RIDZUAN",0,6,13,3],["AMALIA NUR HAFIZAH BINTI MOHD YUSLIMIN",0,2,2,2],["FAREEZ MIKAEL BIN MUHAMMAD FAIZAL",0,7,6,4],["MUHAMMAD 'AUF FARHAN BIN MAT HAZUWI",0,6,1,3],["MUHAMMAD ADAM ILMAN BIN MOHD SHOLIHIN",0,2,4,5],["MUHAMMAD AFIF NAUFAL BIN MOHD AFENDI",0,6,9,1],["MUHAMMAD AMEER MUSTAQIEM BIN MOKHTARUDIN",0,6,10,5],["MUHAMMAD AMIRUL RAYYAN BIN MOHD HAFIZAN",0,2,7,5],["MUHAMMAD AZHAM BIN MOHD FAIROSE",0,6,11,5],["MUHAMMAD DANIEL BIN IBRAHIM",0,7,8,5],["MUHAMMAD HAKIM FIRDAUS BIN HAMIRUL AZMI",0,6,5,3],["MUHAMMAD LUTFI BIN MOHD NOOR AZLAN",0,7,3,3],["MUHAMMAD LUTHFI BIN AHMAD HASNAN",0,6,2,4],["MUHAMMAD SYAHID ARYAN BIN MUHAMMAD SHUKRI",0,2,1,3],["MUHAMMAD ZIYAD BIN MOHD SUHAIMI",0,6,9,3],["NOR ZULIA AMANI BINTI ABDUL RAHMAN",0,2,5,2],["NUR ADAMMIYAH BINTI ASMADINAZAFHUDDIN",0,7,3,2],["NUR AFRINA SYAFIQAH BINTI JOHARI",0,5,8,2],["NUR ALESHA ZAHRA BINTI MOHD ROSLI",0,7,12,1],["NUR ARIQAH SAFIYA BINTI MUHAMAD HAFIZ",0,4,11,4],["NUR FAAEQA ERYNA BINTI MOHD KHAIRUL NIZAM",0,4,7,0],["NUR FAAEQA ERYNA BINTI MUHAMMAD KHAIRUL NIZAM",0,0,0,4],["NUR HAFIZAH BINTI HASMAWI",0,4,4,1],["NUR MARZIA BINTI NURUL ASMADY",0,5,6,1],["NUR SYANIEA ARISSA BINTI MUHAMMAD SAHIZUL",0,7,9,2],["NUR SYIFA MIKAYLA BINTI MUHAMMAD MARZUKI",0,0,0,2],["NUR SYIFAA MIKAYLA BINTI MUHAMMAD MARZUKI",0,5,10,0],["NUR ZARA DHIYA HUMAIRA BINTI MOHD SAIFUDDIN",0,7,7,1],["NUR ZUYYIN INSYIRAH BINTI ISMAIL",0,2,12,2],["NURKHIERAYSHA ZAHHIRA BINTI MOHD RIZAL",0,2,12,4],["NURUL AULIA RAISYA BINTI ABDUL HAKIM",0,4,12,4],["NURUL NUSRA ADRIANA BINTI MOHD JAMIL",0,4,11,2],["SHARIFAH RAWDHA ADRIANA BINTI SYED MUHAMMAD SHAFIEE",0,5,4,1],["SITI NURRAISYA UMAIRAH BINTI YUSOF",0,5,5,4],["SYED AHMAD SAIFF AR AKHTAR BIN SYED AHMAD NABIL",0,2,4,1],["UMMU SARA AISHAH BINTI MOHAMAD ARMAN",0,7,3,2],["WAN UMAR HADDAD BIN AHMAD SUFFIAN",0,0,0,4],["WAN UMAR HADDAD BIN WAN AHMAD SUFFIAN",0,6,13,0],["ADAM WAFIY BIN MOHD SYARIEE FADLI",1,6,3,5],["AFIZ FIRDAUS BIN AHMAD AMIRI",1,6,6,1],["DEWA PUTRA BIN AHMAD REZAL",1,6,5,5],["ELIYA QAISARAH BINTI MOHD FAHIS",1,5,13,2],["EUSOFF ADAN BIN ANIM",1,6,0,3],["HARZAN DURRANI BIN SAIFULANUAR",1,2,11,5],["KHALISH HARRAZ BIN MOHD MARZUKI",1,7,10,3],["MUHAMMAD ADEEB DAIYAN BIN MOHD AFANDDI",1,2,13,3],["MUHAMMAD AIDIL ZAFRAN BIN ROSLI",1,2,1,5],["MUHAMMAD AMIRUL KHALIL BIN MOHD AMIR",1,7,3,5],["MUHAMMAD ARIEF NABHAN BIN ABDUL LATIF",1,6,2,4],["MUHAMMAD AUFA ANAQI BIN MUHAMMAD AFANDI",1,2,2,4],["MUHAMMAD FAREEZ NAUFAL BIN MOHD SAFRI",1,6,5,1],["MUHAMMAD HAQQ IMAN BIN IRWAN",1,6,8,5],["MUHAMMAD HARRAZ RIZQI BIN MOHD HAZLI",1,6,10,3],["MUHAMMAD PUTRA SYAZREEN AMEERUL FAIZ BIN ABDULLAH",1,2,11,3],["MUHAMMAD RAFIQ ZIKRI BIN MOHD RIDWAN",1,7,9,3],["MUHAMMAD RAMADHAN AQASHA BIN ABDUL RAHMAN",1,7,10,3],["MUHAMMAD TAUFIQILLAH BIN MOHAMED FAIZUL",1,2,12,4],["NUR AIRIS DAMIA BINTI SUHAIMI",1,4,1,2],["NUR AMNI BINTI MOHD FADELI",1,5,2,2],["NUR ANIS SYAWALNI BINTI MOHD ASMADI",1,4,5,1],["NUR DAMIA ARISSA BINTI MOHD SAM",1,5,8,4],["NUR DAMIA HUMAYRAA BINTI MOHD SAULE",1,4,11,4],["NUR HANA SAFIYA BINTI NOR MOHD HALIM HELMI",1,4,7,2],["NUR HAZIRAH SUMAYYAH BINTI AHMAD HANAFI",1,4,9,1],["NUR IMAN AULYA SHAFIA BINTI SAIYIDINA",1,5,3,2],["NUR MIQA UMAIRAH BINTI ABDUL HAFIZ",1,7,1,2],["NUR RAZIQ BASYAR BINTI AWANG BAHARUDDIN",1,5,4,4],["NUR UMMAIRAH BINTI HASHIM",1,2,0,4],["NUR ZAARA ERYNA BINTI MUHAMMAD AFANDI",1,2,6,1],["NURHANA INSYIRAH AISYA BINTI NOZMAN",1,5,11,2],["NURUL SYUHA NASUHA BINTI SAMSUDDIN",1,4,7,2],["SHEIKH MUHAMMAD HUD ZHAFRAN BIN SHIEKH AHMAD SHUKRI",1,6,8,1],["SYAFADZUL EIMAN ESHAN BIN MOHD FADZLEE",1,2,7,5],["ADAM ZHAREEF BIN MOHD SYIMIR HAZIQ",2,6,9,5],["ALYA NAZIRAH BINTI MOHD HARIS",2,2,12,2],["AMMAR RAYYAN HAMZZA BIN MOHD FIRDAUS",2,2,2,3],["AMRI BIN HAZANIZAINI",2,7,3,1],["ANNUR MARDHIYAH BINTI EKMAN YUSUF",2,5,12,2],["AZRA HUMAIRA BINTI AMINUDIN",2,7,12,1],["BILQIS HAYFA BINTI MOHAMAD KHAIDIR",2,4,2,1],["BRAYYAN MIKAIL BIN MUHAMAD SUKRI",2,2,4,4],["DAHLIA AISYAH BINTI SYAHRUL AMIRU",2,4,4,4],["DHIA HUSNA BINTI MUHAMMAD FAIZAL",2,5,13,4],["DHIYAUL QAYYUM BIN KHAIREE",2,7,13,3],["FALIQ RIZQI BIN ABDULLAH",2,6,5,5],["FATHUL AISAR BIN FAIDHI AZRI",2,2,6,4],["HAYFA ARDANI BINTI ZAINAL RASHID",2,4,9,1],["HAYFA HANINA BINTI RASMAN",2,5,4,2],["MOHAMAD FARHAN BIN MOHAMAD NORHAIFI",2,6,8,1],["MOHAMAD FAYYADH AZIB BIN MUHAMAD BADRULHISANI",2,7,9,3],["MOHAMAD HAFIZUDDIN BIN ALI",2,2,7,5],["MOHAMADI NAZRAF BIN MOHD NAZERI",2,6,11,3],["MUHAMMAD AL MALIKI BIN MOHD FADLI",2,6,0,5],["MUHAMMAD AYDIN WAHYUDI BIN NARUL HUDA",2,2,4,1],["MUHAMMAD HASBI WAFIE BIN MOHD NORHISAM",2,7,10,4],["MUHAMMAD SYAMIM BIN MOHD RIDZUAN",2,7,5,5],["MUHAMMAD UWAIS RAZIN BIN AZZUARI AZRI",2,6,3,3],["NAURA SYAHIDATUL ADAWIYAH BINTI MOHD AZLAN",2,7,1,4],["NUR AILA BINTI AHMAD ASHRAF",2,7,12,4],["NUR ALESHA ZAHRA BINTI MOHD FIRDAUS",2,5,12,1],["NUR ALYA NAJLA BINTI MUHAMAD SUHAIMI",2,5,9,1],["NUR ANEESA BINTI ZAIN MOKHSAR",2,7,6,2],["NUR AQILAH NAJWA BINTI MOHD HAIRIL",2,2,11,2],["NUR AYRA SHAFIYYA BINTI MUHAMMAD HAZIZI",2,4,6,1],["NUR DELISHA QAISARA BINTI MUHAMAD SUPIAN",2,4,7,4],["NUR SYAFIEA ALEESYA BINTI SUHAIMI",2,2,1,2],["SITI ASFARINA AMNI BINTI MOHD ASYRAF AMIN",2,2,8,2],["SITI NUR AINUL MARDHIAH BINTI MOHD KHAIRIL",2,4,12,2],["SITI NUR HAYFA BINTI MOHD HAFIZUL",2,7,10,2],["SUFI NUR IMAN BINTI MOHD ANAS",2,5,7,4],["TENGKU AMMAR IRFAN BIN TG YOLHENDRI",2,2,9,3],["AHMAD SYAHID BILAL RAIHAN BIN MOHD EFFENDY",3,6,13,3],["AMNIA SAFWAH BINTI AHMAD SUHAIMI",3,5,12,4],["AMSYAR RAIQAL BIN AMRI",3,6,1,1],["DANNY AL FITRI BIN MOHD AL'SHAFIE",3,6,9,3],["DHIA ADRIANA BINTI MASNAWI",3,7,6,4],["DHIA ANNATASYA DYLAILA BINTI AMIR",3,4,6,4],["DINA ADRIANA BINTI SYAHRUL AMIRU",3,5,9,2],["ENGKU LAILA JASMIN BINTI ENGKU FAZZARUDDIN @ AMALEE",3,4,11,2],["MOHAMAD AYIEE AIMAN BIN MOHD NAZERI",3,7,3,3],["MOHAMAD HARITH FAYYAD BAHARUDIN BIN ABDULLAH",3,6,1,5],["MOHAMAD SAIF SHAZWAN BIN ABDUL MUHAIMIN",3,7,6,4],["MUHAMMAD AMMAR ASYRAFF BIN AZMI",3,2,8,1],["MUHAMMAD DANISH IRFAN BIN ABDULLAH",3,6,11,3],["MUHAMMAD FAQIH ZAFFRAN BIN AHMAD FARHAN",3,2,2,5],["MUHAMMAD FAWWAZ HAKIMI BIN MOHD SAFRI",3,6,4,3],["NOAH IMAN BIN MD RASANI",3,2,8,5],["NOR HUMAIRA BINTI AHMAD ZAINI",3,5,7,2],["NUH IDRIS BIN FAISAL RAZUL",3,2,4,5],["NUR AANISAH BINTI MOHD KHAIROOL HAIZAM",3,7,2,2],["NUR AQILAH ARISSA RANIA BINTI MOHD RIZAL",3,5,11,2],["NUR ARIEFAH SOLEHAH BINTI AHMAD TAJUDIN",3,7,10,1],["NUR DAMIA ARISSA BINTI MOHD FIRDAUS",3,2,8,4],["NUR FARISHA FARHAH BINTI MOHD NUR ISNAINI",3,5,13,2],["NUR FASEEHAH ZHUFAIRAH BINTI MOHD ZULKIFLI",3,2,2,1],["NUR HANNAH ZUYYIN BINTI MOHD FAIZUL",3,4,4,2],["NUR IRDINA AQILAH BINTI MOHD TARMIZI",3,4,12,4],["NUR KHAISARA BINTI MOHD KHAIRIL IZUWAN",3,2,5,1],["NUR QAIREEN IMANINA BINTI MOHAMMAD NOR AZMAN",3,4,3,2],["NUR ZAFIRA ALIA SOFEA BINTI FAIRUNIZAM",3,5,1,2],["NURHUSNINA ATHIYAH BINTI AHMAD FADLEE",3,5,0,1],["PUTRA IFFAT KHALISH BIN MOHD FASHA FAIZAN",3,2,10,3],["SHARIFAH SOFEA AZ ZAHRA BINTI SYED AHMAD NABIL",3,4,10,2],["SITI NUR AIYREEN BINTI MOHAMMAD RIZAL",3,4,11,2],["UMMU SALMAH BINTI ABDUL AZIZ",3,5,10,1],["WAN HASYA ARIQA BINTI WAN MOHD BILKHAIR",3,7,6,2],["WAN NOR ALYA ALEESYA BINTI WAN MOHAMAD NOR ASSYAKIRIN",3,4,7,2],["WAN NUR AIMY HAMIDAH BINTI WAN MOHD ZAKI",3,5,2,4],["ZUL EDRIAN DHARIZ BIN ZUL EDZANI",3,6,9,1],["A'INUL MARDHIAH BINTI MOHD HAFIZ",4,5,5,2],["AARIQ AYISH ANAQI BIN MOHD AZUWAN",4,2,1,1],["ADIELIA SORFINA BINTI ASMAWI",4,2,6,2],["AHMAD SYADAD AIMAN BIN AHMAD HAFIS EZZAT",4,6,3,4],["ARMAND BIN MUHAMMAD MAS'AB",4,0,7,4],["MOHAMAD KHAIRUL IKHWAN BIN AZMAN",4,2,10,1],["MUHAMAD ADIF AMZAR BIN HAIDIR",4,6,8,5],["MUHAMAD ZHAFAR DANIAL BIN AMIZ AZYUSRIE",4,6,12,3],["MUHAMMAD AAKIF RAYHAN BIN MOHD SHASRUL",4,7,11,3],["MUHAMMAD ALI BIN RAHIMAN RUHEIL",4,2,5,4],["MUHAMMAD AMMAR ZAFRAN BIN MOHD SAKRI",4,2,3,5],["MUHAMMAD FATEH ARSYAD BIN AINUL FARHAN",4,7,1,1],["MUHAMMAD KASYFI AL HABIB BIN MUHAMMAD AIMAN",4,2,7,3],["MUHAMMAD KHAIRUL IZWAN BIN MOHD SHAIFULDIN",4,7,11,5],["MUHAMMAD RAYYAN DANISH BIN MOHAMAD AMIRUL",4,7,10,0],["NAQIB ZULHILMI BIN NURULAZMI",4,6,5,3],["NUR ADEERA RAISHA BINTI MOHD HAFIS",4,5,8,2],["NUR AISHAH SHAHIRAH BINTI RAMLI",4,2,12,2],["NUR AISYAH BINTI ABDUL ALIM",4,5,4,1],["NUR HANANI JANNAH BINTI MOHD SHARIFF",4,4,7,2],["NUR IRISH QALISYA BINTI MOHD RIDZUAN",4,5,10,4],["NUR ISRA ADLINA BINTI MOHD SABRON JAMIL",4,4,1,2],["NUR SYAKIRA HAZWANI BINTI MOHD SYAZWAN",4,7,11,1],["NURUL FATIN HUMAIRAH BINTI MOHD FADZIL",4,4,3,2],["NURUL SYIFA BINTI AHMAD",4,2,10,2],["PUTRI NUR HANISHA DAMIA BINTI ABDUL HAKIM",4,4,13,4],["RAJA MUHAMMAD AFDAL BIN RAJA MOHD HISHAM",4,6,13,5],["TUAN AIRIEL DANISH BIN TUAN SYAFAREEN",4,6,2,5],["AHMAD RASUL ALHAQ BIN ABDULLAH",5,6,2,5],["AHMAD ZIYAD NAUFAL BIN MOHD NAJIB",5,7,13,4],["AWWAL QUSYAIRI BIN MOHD KHAIRUDDIN",5,2,12,3],["CHE MUHAMMAD YUSRI BIN CHE MOHD ROSLI",5,6,8,4],["MOHAMAD ANAS BIN MOHAMAD FAIDZUL",5,2,4,1],["MUHAMAD UTSMAN AL AFFAN BIN MUHAMAD YASIM",5,2,10,5],["MUHAMMAD ADAM RAYQAL BIN ABDUL HAFIZ",5,6,5,1],["MUHAMMAD AIDIL HAZIQ BIN MOHD NORDIN",5,7,13,1],["MUHAMMAD ALI IQBAL BIN MUHAMAD ARSHAD",5,6,7,1],["MUHAMMAD AQID HAMBALI BIN MOHD AZAN FAJRI",5,7,4,4],["MUHAMMAD AZ ZIYAD AIKAL BIN NORUL AZIZI",5,6,11,5],["MUHAMMAD IZZ RAYYAN BIN MUHAMMAD SHUKRI",5,6,2,3],["MUHAMMAD IZZAT DINI BIN MOHD RIZUAN",5,6,8,5],["MUHAMMAD QHUSYAIRI BIN MOHD FAIZ",5,6,5,4],["MUHAMMAD SYAFIQ ASYRAAF BIN MOHD YUSRI",5,6,12,3],["MUHAMMAD SYARFIQ IMAN BIN KAMARUDDIN",5,6,12,5],["NUR AIRA ALIYA BINTI MOHD AZLAN",5,2,10,2],["NUR AIRIS ARISSA BINTI SYAIFULBAHRI",5,4,7,1],["NUR AQILAH BINTI ADNAN",5,4,7,4],["NUR ARIEANA QISTINA BINTI ZULKIFLI",5,0,11,4],["NUR FATHIYYAH DALISA BINTI MOHAMAD ZAINUDDIN",5,2,5,1],["NUR FITRI AULIA BINTI ABDUL MU'IZ",5,5,3,2],["NUR HAFIYYA FATHIYYATURAHMA BINTI RAHMAT",5,4,2,2],["NUR IMAN RIYANNA BINTI NARISAM",5,5,1,4],["NUR MEDINA BINTI ZULKIFLI",5,4,0,1],["NUR NADHIRAH HUWAIDA BINTI MOHD NOR AZIZI",5,2,13,2],["NUR ZAARA ALISHA SAFFIYA BINTI MUHAMMAD AFANDI",5,4,10,4],["SHARIFAH RABIATUL ADAWIYAH BINTI SYED MUHAMMAD SHAFIEE",5,5,8,4],["SITI AISYAH NUR BINTI AZMAN",5,4,5,2],["TENGKU ASYRAAF FIQTRIEY BIN TENGKU MOHD FAIZAL",5,7,13,3],["TENGKU NUR AISYA KAYLA BINTI TENGKU MOHAMAD SHAHIZAD",5,4,1,2],["USAMA BIN ADIL GUNAWAN",5,6,6,1],["WAN MUHAMMAD FAYYADH ADHA BIN WAN ROSLAN",5,2,5,3],["WAN NUR DALIA ERYNA BINTI WAN NAZRI",5,5,12,2],["ZARRA SOFEA BINTI FARDLI",5,5,3,4],["ABDUL QAYYUM BIN MOHAMMAD AZHAR",6,6,9,3],["ABDURRAHMAN 'AUF BIN MOHD FADHIL FAHMI",6,7,7,1],["ADAM FIRDAUS BIN RIDZUAN",6,7,13,4],["AHMAD AKIF AMSYAR BIN MUHAMMAD ASYRAF",6,6,9,1],["AHMAD LUQMAN HAAZIM BIN IZRIN SAFINI",6,7,12,5],["AINNUR DAMIA BINTI SYAARI",6,5,12,2],["AKIF AMRULLAH BIN MUHAMMAD ALIFF",6,7,2,4],["AZEEM HAZIQ BIN ARMAN SHAH",6,6,9,5],["DIAN ZULAIKHA BINTI BADRUL MUKHALIS",6,2,6,1],["IZZ KHAYRA ALEENA BINTI MOHD MOHAIZU",6,5,9,2],["MIKHAEL HADIFF BIN MOHD HATTA",6,2,9,3],["MOHAMMAD ANAQI MUAYYAD BIN MOHAMMAD ADNAN",6,6,10,5],["MUHAMAD ADEEB MIKHAIL BIN MOHAMAD TARMIZI",6,7,4,1],["MUHAMMAD AFIQ IZZUDIN BIN NAZRI ISKANDAR",6,6,3,1],["MUHAMMAD AKIF BIN OMAR AMIRUDDIN",6,0,0,4],["MUHAMMAD ALIF HAFIY BIN MOHD LOQMAN",6,7,3,3],["MUHAMMAD AQIEF ZYAD BIN MOHD NAZRI",6,6,7,5],["MUHAMMAD DAIYAN FARIZ BIN MUHAMMAD TAHA",6,7,7,4],["MUHAMMAD HAIKAL BUKHARI BIN MOHD KHAIRUL ADHA",6,2,11,1],["MUHAMMAD HARITH HAYKAL BIN MOHD HAFIZUL",6,7,12,3],["MUHAMMAD ZAWAWI BIN MOHD RADHDI",6,0,6,0],["NOR RABBIATUL DAMIA BINTI MOHD NORHISAM",6,4,13,4],["NUR ADRA QISYA BINTI MUHAMMAD AIDI ASLAM",6,4,1,2],["NUR AFIA QAIREEN BINTI AHMAD SAIFULRIZAN",6,5,9,2],["NUR AISYAH DALILA BINTI MOHD SAYUTI",6,5,12,4],["NUR AMNA AMANI BINTI MOHD HISYAMUDDIN",6,2,3,4],["NUR DELISHA QAISARA BINTI MOHD MARZUKI",6,5,10,2],["NUR ERYNA HUMAYRAA BINTI NORSARUDDIN",6,4,7,1],["NUR FARISHA ANISS BINTI MALEK FAISAL",6,2,11,4],["NUR HUMAYRA SOFIA BINTI NOR MUHAMMAD HAFIZ",6,4,6,4],["NUR IZZARA AURELLIA AISYAH BINTI ABDULLAH",6,5,4,4],["NUR QAIRANA BASHEERAH BINTI MOHD SUFFYAN",6,7,6,2],["NUR SYAZARRA AZZALEA BINTI NOOR SAIFULL AZZRI",6,5,5,1],["NUR WARDAH BASHIRAH BINTI ZAILAN",6,4,12,1],["QAIREEN NUR NAAILA BINTI MOHD JERI",6,7,4,2],["UWAIS QARNI BIN KHAIRUDDIN",6,2,8,5],["WAN MUHAMMAD ZILL QAYYIM BIN WAN MOHD ISKANDAR ZULKANAIN",6,2,5,5],["WAN NURSOFEA DAMIA BINTI WAN MUZABIDI",6,4,12,1],["ABDULLAH FAHMI BIN MOHD AZWADI",7,1,2,3],["ABU HURAIRAH BIN ABU BAKAR",7,6,8,3],["ADIB HAKIMI BIN AMINUDIN",7,7,11,3],["AHMAD KHAIRI BIN KHAIRUL ANNUAR",7,7,7,5],["ALISHA ZARA SOFIA BINTI ABDUL HALIM",7,5,10,4],["HARITH NAJMI BIN JUNAIDI",7,6,13,4],["KHAYRA INSYIRAH BINTI ABDUL MUTALIB",7,7,13,2],["MUHAMMAD ADEEB ALI BIN MOHD AZLIZAM",7,7,11,1],["MUHAMMAD ADIB ZAYAN BIN MOHD KAMARUL BAHA",7,1,3,3],["MUHAMMAD AL AMIN BIN MOHD FADLI",7,6,1,5],["MUHAMMAD AMMAR HARITH BIN NOOR AZREN",7,6,4,5],["MUHAMMAD ARIQ ISKANDAR BIN MOHD AMALUDDIN",7,6,8,3],["MUHAMMAD HANIF BIN AHMAD HASNAN",7,1,6,1],["MUHAMMAD HAZIQ UKASYAH BIN MOHD HAZMI",7,7,10,4],["MUHAMMAD IZDIHAR BIN MD ISA",7,6,7,4],["MUHAMMAD IZZHAR BIN MD ISA",7,1,4,3],["MUHAMMAD SYARIFUDDIN BIN AIZAM SURAZI",7,7,4,3],["MUHAMMAD ZIYAD BIN ZAIDI",7,1,6,3],["NUR ALIYA NATASHA BINTI HAMIRUL AZMI",7,1,1,1],["NUR ALYA NADHIRA BINTI MUHAMAD SUHAIMI",7,4,8,2],["NUR AUNI UMAIRAH BINTI MOHD ADHA",7,1,11,4],["NUR FATIN BATRISYA BINTI SHAIFUL AKHBAR",7,5,0,1],["NUR FATIN NAJIHAH BINTI MOHD NADZIF",7,0,6,0],["NUR IZZARA QHALISHA BINTI SHAHRULIZWAN",7,5,0,1],["NUR MAIIZZATUL IEZAHRA BINTI SALIHUDIN",7,5,3,1],["NUR RAISHA BINTI MOHD RIDZUAN",7,1,6,4],["NURUL FATIN NAJIHAH BINTI MOHD NADZIF",7,5,5,2],["PUTRI HAFIYA JANANI BINTI KHAIRUL",7,4,2,4],["SERI FATIMAH BINTI SAFARRI",7,5,6,4],["SITI AIRA QAISARA BINTI ABDUL QAYYUM",7,4,7,2],["UWAIS ZIYYAD BIN AHMAD RAFIAN",7,7,6,4],["AHMAD NUH NASHIF BIN KHALIZAN",8,6,13,3],["AINUL RAISYAH RANIA BINTI AMIRUL AKMAL",8,5,1,2],["AISYA IRDINA BINTI JAAFAR",8,4,2,4],["AQIL HARITH BIN MOHD RUZZAMAN",8,7,8,5],["AYU EVA NATASHA BINTI ABDULLAH",8,1,4,2],["HAFIY FIRASH BIN HAKMAL HAKIM",8,1,11,4],["HANEEF NAJMEE BIN HASBULLAH",8,6,12,1],["IMAN SOFEYA BINTI BULKHAIQRIL FIRDAUS",8,5,8,1],["MOHAMAD FAHMI BIN MOHAMAD NORHAIFI",8,6,12,1],["MOHAMAD LUQMAN ALHAKIM BIN MOHD KHAIRUL",8,7,10,1],["MUHAMAD SHAFIK RAMADHAN BIN SHAFEK EFFENDI",8,6,13,1],["MUHAMMAD AKIF RAIYAN BIN MOHD NORFADILAH",8,6,12,4],["MUHAMMAD ALI AMSYAR BIN ABDULLAH",8,1,8,3],["MUHAMMAD AQIL QUSHAYYI BIN ABU BAKAR",8,1,2,4],["MUHAMMAD ARASH AMSYAR BIN MUHAMMAD AFANDI",8,1,4,0],["MUHAMMAD AZIQ HAIRIL BIN JESMI",8,7,11,1],["MUHAMMAD HARRIS HAIQAL BIN NORKHAIRUDIN",8,7,3,3],["MUHAMMAD MUTA'ALI BIN ROZALI",8,0,5,0],["MUHAMMAD NAQIB RAYQAL BIN MOHD ZAMERI",8,6,0,1],["NUR FATIHAH AIMY BINTI MOHD AZMI",8,7,6,2],["NUR WARDATUL WIDAD BINTI MOHD NAZEERE",8,4,7,2],["NUR ZARA ALISHA BINTI MOHD HADI",8,5,5,4],["NURUL KHAILISA MAISYARA BINTI MUHAMMAD ZULKIFLI",8,5,12,2],["PUTRA AISY DINIY BIN NORUL AZMAN",8,1,11,5],["PUTRI NUR AIN NATASYA BINTI AMRAN",8,0,5,0],["RAFISSAH ZAHHIRA BINTI MOHD FAIZAL",8,5,1,2],["SITI ZAININA SYUHAIDAH BINTI MOHD SAIFUL",8,4,3,2],["ZULHELMI NORFAKHRULLAH BIN ZULKIFLI",8,6,5,3],["AHMAD MUIZUDDIN BIN ASHAARI",9,7,1,5],["AISYAH MALISA BINTI MD AZRIM",9,5,4,2],["ALIF ARSYAD BIN ABDUL GHAFAR",9,7,10,3],["ERYNA ZAHRA BINTI MOHD AMIRUL",9,4,4,4],["KAMARUL AZRAFF ZAFFRIL BIN ABDUL QAYYUM",9,1,5,5],["MOHAMAD FIRDAUS BIN ABDULLAH",9,1,3,3],["MOHAMAD QASHRI ZAQWAN BIN MOHAMAD ASRI",9,7,6,4],["MUHAMMAD ADAM MIKHAIL BIN ABDULLAH",9,1,2,3],["MUHAMMAD AMEER FIKRI BIN MOKHTARUDIN",9,7,8,3],["MUHAMMAD DANIAL DURRANI BIN MOHD SAIME",9,6,10,5],["MUHAMMAD DANIEL MIKAIL BIN ABDUL RAHMAN",9,1,12,3],["MUHAMMAD FIRAS FAHMI BIN YAHYA",9,7,0,4],["MUHAMMAD FIRAS MIRZA BIN MUHAMMAD ELLEYAS",9,6,2,0],["MUHAMMAD IRHAM SYAFI'I BIN JAZLI SYAHMI",9,1,4,5],["MUHAMMAD RAYYAN MIKHAEL BIN ABDULLAH",9,1,1,5],["MUHAMMAD RAZI BIN ABDUL HALIM",9,6,13,3],["MUHAMMAD RIZQI RAMADHAN BIN ABDUL ALIM",9,7,11,5],["NOR AQILAH HUMAIRAH BINTI MOHAMAD NOR AL'HAJ",9,5,0,0],["NOR RUMAISO BINTI AHMAD FAIS ZULKURNAEN",9,4,13,2],["NUR ALYAA UMAIRAH BINTI MOHD RIDWAN",9,7,10,2],["NUR AMEERA DANISHA BINTI MOHD YUSRI",9,7,6,2],["NUR QISYA ZARA BINTI AHMAD ZAWAWI",9,4,2,2],["NUR SYAZWANIE BINTI MOHD HAFIZ",9,5,4,2],["NURUL IFFAH BINTI MIOR BURHANUDDIN",9,5,12,1],["PUTRA ARYAN SHAHIR BIN MOHMMAD FAZILLAH",9,1,6,3],["RABIATUL ADAWIYAH BINTI NAZRI ISKANDAR",9,4,13,2],["SYARIFAH NURUL JANNAH BINTI SYED KHUSAIRI",9,4,11,1],["TENGKU AIDID IMRAN BIN TG YOLHENDRI",9,6,11,1],["WAN NUR IRDINA IZZATI BINTI WAN NAZRI",9,7,11,2],["ADELINE IRDINA HANA BINTI MOHD HARIS",10,5,2,1],["AHMADUL AMEEN PUTRA BIN KHAZALI",10,6,7,1],["AINNUL MARDHIAH BINTI MOHD MOKTAR",10,4,12,2],["AQILAH AZZAHRA BINTI AMARUDIN",10,4,13,2],["DHIA IMTIYAZ BINTI MUHAMMAD FAIZAL",10,5,7,4],["DHIYA ZARA IMANI BINTI MOHD YUSLIMIN",10,7,5,1],["FARAH NURSYAZATUL IMAN BINTI AL-AZMI",10,4,12,2],["IZZ THAQIF RAYYAN BIN HAIRI AZUAN",10,7,4,4],["KHAYRA IMAN BINTI ABDUL MUTALIB",10,4,4,2],["MUHAMMAD AZHAD BIN MOHD FAIROSE",10,6,3,1],["MUHAMMAD BIN MOHD FADHIL FAHMI",10,6,6,4],["MUHAMMAD FIRASH IRFAN BIN MOHD FIRDAUS",10,6,5,3],["MUHAMMAD HARRAZ ASFA BIN ROSLAN",10,7,8,5],["MUHAMMAD LUQMAN NUR HAKIM BIN MOHD RODZI",10,1,11,5],["MUHAMMAD WAFIY BIN MOHD ANAS",10,1,13,1],["MYA IZZARA BINTI MUHAMMAD RUZI",10,7,11,4],["NASRI BIN MUJAHID",10,6,3,1],["NUR ALEEYA SYAHINDAH BINTI ABDUL HAFIZ",10,4,12,4],["NUR ALISHA DAMIA BINTI NOR HISHAM",10,7,4,2],["NUR HANNA ANNISA BINTI RUDZUAN",10,7,2,1],["NUR HANNAN ZAHIRAH BINTI AHMAD HANAFI",10,5,4,2],["NUR HUSNA MARDHIYAH BINTI AHMAD JUHALMY",10,4,6,4],["NUR IRDINA DARWISYAH BINTI MOHD EERFFAN",10,4,10,2],["NUR IZARA DAMIA BINTI DIDORIS",10,5,12,1],["NUR NADHIRAH HUMAIRAH BINTI MUHAMAD KAMALRUL",10,1,10,4],["NUR RANIA BATRISYA BINTI MOHD RAFIZIE",10,1,12,2],["NUR SYAMIMIE UZMA BINTI MUHAMMAD SUHAIRIE",10,4,8,2],["NUR SYAZWINA SAFRINA BINTI MUHAMMAD SAFRI",10,4,8,1],["NUR URFAH RAUDHAH BINTI MOHD SHAARI",10,1,7,4],["NURHANA SOFIYA BINTI MUHAMAD HANAFI",10,5,3,2],["RAED ALI MUSTAFA BIN MUHAMAD RUSHDI",10,6,12,5],["SAIDATUL SYIFA' BINTI ABDUL KADIR",10,4,1,4],["TUAN MOHAMAD HAZZIQ BIN TUAN MOHD BAKRI",10,7,6,3],["AZ ZAHRA ZUHAIRA BT YUHANAS",11,3,0,0],["FATEEN NORHAIFA BT NORMUHAMMAD HAIRI",11,3,0,0],["NUR AAFIYA NABIHAH BT MOHD SHAARI",11,3,0,0],["NUR ADELLEA MIKAYLA BT MOHAMMAD ADNAN",11,3,0,0],["NUR AYRAA ADEENA BT AHAMD BASIRUN",11,3,0,0],["NUR HANAN SAMEEHA BT NOR MOHD HALIM HELMI",11,3,0,0],["NUR INARA FALISHA BT FARHAN",11,3,0,0],["NUR QASEH QISMINA BT MOHD SYAZMIL",11,3,0,0],["NUR RAFIFAH BT MUHAMAD SAIFUL AMRI",11,3,0,0],["PUTERI NUR AYRA DELISHA BT MUHAMMAD ZHAFRAN",11,3,0,0],["RAIISA AREEFA BT MOHD RUZZAMAN",11,3,0,0],["SITI SAFIYA WILDA BT MUHAMMAD SHAFIQ",11,3,0,0],["WAN HADA AFEEYA BT WAN MOHD BILKHAIR",11,3,0,0]]};
+
+    const STORAGE_KEY = 'sk_beserah_koku_2026_v3';
+    let isAdminUnlocked = false;
+    let currentOprImages = [];
+
+    function buildInitialState() {
+      const students = RAW_DATA_2026.r.map((row, idx) => ({
+        id: 'STU-' + (1000 + idx),
+        nama: row[0],
+        kelas: RAW_DATA_2026.c[row[1]] || '',
+        ic: '',
+        ub: RAW_DATA_2026.u[row[2]] || '',
+        kp: RAW_DATA_2026.k[row[3]] || '',
+        sp: RAW_DATA_2026.s[row[4]] || ''
+      }));
+
+      const teachers = [
+        { id: 'TCH-1', nama: 'CIKGU MOHD ZULKIFLI BIN HASSAN', jawatan: 'Ketua Guru Penasihat', kategori: 'Unit Beruniform', unit: 'Pengakap', telefon: '019-9123456' },
+        { id: 'TCH-2', nama: 'CIKGU NORAZLINA BINTI OSMAN', jawatan: 'Ketua Guru Penasihat', kategori: 'Unit Beruniform', unit: 'TKRS (Tunas Kadet Remaja Sekolah)', telefon: '013-9234567' },
+        { id: 'TCH-3', nama: 'USTAZAH SITI AISHAH BINTI IBRAHIM', jawatan: 'Ketua Guru Penasihat', kategori: 'Unit Beruniform', unit: 'PPIM (Pergerakan Puteri Islam Malaysia)', telefon: '012-9345678' },
+        { id: 'TCH-4', nama: 'CIKGU FARIDAH BINTI YUSOF', jawatan: 'Ketua Guru Penasihat', kategori: 'Unit Beruniform', unit: 'Pandu Puteri Tunas (PPT)', telefon: '017-9456789' },
+        { id: 'TCH-5', nama: 'CIKGU AHMAD FAIZAL BIN RAHMAN', jawatan: 'Ketua Guru Penasihat', kategori: 'Unit Beruniform', unit: 'Bomba Junior', telefon: '019-9567890' },
+        { id: 'TCH-6', nama: 'CIKGU NURUL HUDA BINTI KAMARUDIN', jawatan: 'Ketua Guru Penasihat', kategori: 'Unit Beruniform', unit: 'BSMM (Bulan Sabit Merah Malaysia)', telefon: '011-12345678' },
+        { id: 'TCH-7', nama: 'CIKGU ROSNAH BINTI ABDULLAH', jawatan: 'Ketua Guru Penasihat', kategori: 'Unit Beruniform', unit: 'Kelip-Kelip (Prasekolah)', telefon: '014-8123456' },
+        { id: 'TCH-8', nama: 'CIKGU HAFIZAH BINTI ZAINAL', jawatan: 'Ketua Guru Penasihat', kategori: 'Kelab & Persatuan', unit: 'Kelab STEM', telefon: '016-9123456' },
+        { id: 'TCH-9', nama: 'CIKGU WAN MOHD RIDZUAN BIN WAN ALI', jawatan: 'Ketua Guru Penasihat', kategori: 'Sukan & Permainan', unit: 'Bola Sepak', telefon: '019-9876543' },
+        { id: 'TCH-10', nama: 'CIKGU Zuraida BINTI MANSOR', jawatan: 'Ketua Guru Penasihat', kategori: 'Sukan & Permainan', unit: 'Bola Jaring', telefon: '013-9876543' }
+      ];
+
+      return {
+        settings: {
+          title: 'Sistem Pengurusan Data Kokurikulum SK Beserah',
+          subtitle: 'Sekolah Kebangsaan Beserah, 26100 Kuantan, Pahang Darul Makmur',
+          session: 'Sesi 2026',
+          logoDataUrl: '',
+          adminPin: '2026'
+        },
+        classes: [...RAW_DATA_2026.c],
+        units: {
+          ub: RAW_DATA_2026.u.filter(Boolean),
+          kp: RAW_DATA_2026.k.filter(Boolean),
+          sp: RAW_DATA_2026.s.filter(Boolean)
+        },
+        students,
+        teachers,
+        attendance: {},
+        oprs: []
+      };
+    }
+
+    let appState = loadState();
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+      const init = buildInitialState();
+      saveState(init);
+      return init;
+    }
+
+    function saveState(stateObj = appState) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stateObj));
+      } catch (e) {
+        alert('Amaran: Ruang simpanan pelayar hampir penuh. Sila muat turun Sandaran JSON.');
+      }
+    }
+
+    // KAWALAN ADMIN
+    function handleAdminToggle() {
+      if (isAdminUnlocked) {
+        isAdminUnlocked = false;
+        updateAdminUI();
+      } else {
+        document.getElementById('pinInputField').value = '';
+        document.getElementById('pinErrorMsg').classList.add('hidden');
+        openModal('adminPinModal');
+        setTimeout(() => document.getElementById('pinInputField').focus(), 100);
+      }
+    }
+
+    function verifyAdminPin() {
+      const val = document.getElementById('pinInputField').value.trim();
+      if (val === appState.settings.adminPin) {
+        isAdminUnlocked = true;
+        closeModal('adminPinModal');
+        updateAdminUI();
+      } else {
+        document.getElementById('pinErrorMsg').classList.remove('hidden');
+      }
+    }
+
+    function requireAdmin() {
+      if (!isAdminUnlocked) {
+        handleAdminToggle();
+        return false;
+      }
+      return true;
+    }
+
+    function updateAdminUI() {
+      const badge = document.getElementById('adminStatusBadge');
+      const btnText = document.getElementById('adminToggleText');
+      if (isAdminUnlocked) {
+        badge.className = 'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-950/80 border border-emerald-400 text-emerald-300';
+        badge.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span><span>Mod Admin Aktif (Suntingan Dibuka)</span>';
+        btnText.textContent = 'Kunci Mod Admin';
+      } else {
+        badge.className = 'flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900/60 border border-slate-600 text-amber-300';
+        badge.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span><span>Mod Paparan Sahaja</span>';
+        btnText.textContent = 'Buka Mod Admin';
+      }
+      renderAll();
+    }
+
+    // NAVIGASI TAB
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-section').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('tab-active');
+        btn.classList.add('tab-inactive');
+      });
+      document.getElementById('tab-' + tabName).classList.remove('hidden');
+      const activeBtn = document.getElementById('nav-' + tabName);
+      activeBtn.classList.remove('tab-inactive');
+      activeBtn.classList.add('tab-active');
+    }
+
+    function openModal(id) {
+      const el = document.getElementById(id);
+      el.classList.remove('hidden');
+      el.classList.add('flex');
+    }
+
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      el.classList.add('hidden');
+      el.classList.remove('flex');
+    }
+
+    // IDENTITI & LOGO
+    function applyIdentityHeader() {
+      document.getElementById('systemTitleDisplay').textContent = appState.settings.title;
+      document.getElementById('systemSubtitleDisplay').textContent = appState.settings.subtitle;
+      document.getElementById('headerSessionBadge').textContent = appState.settings.session;
+      document.title = appState.settings.title;
+
+      const defaultSvg = document.getElementById('defaultSchoolLogo');
+      const customImg = document.getElementById('customSchoolLogoImg');
+      if (appState.settings.logoDataUrl) {
+        customImg.src = appState.settings.logoDataUrl;
+        customImg.classList.remove('hidden');
+        defaultSvg.classList.add('hidden');
+      } else {
+        customImg.classList.add('hidden');
+        defaultSvg.classList.remove('hidden');
+      }
+
+      document.getElementById('settingSystemTitle').value = appState.settings.title;
+      document.getElementById('settingSystemSubtitle').value = appState.settings.subtitle;
+      document.getElementById('settingSession').value = appState.settings.session;
+    }
+
+    function handleLogoUpload(e) {
+      if (!requireAdmin()) return;
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        appState.settings.logoDataUrl = evt.target.result;
+        saveState();
+        applyIdentityHeader();
+        renderOprPreview();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function saveSystemSettings() {
+      if (!requireAdmin()) return;
+      const t = document.getElementById('settingSystemTitle').value.trim();
+      const s = document.getElementById('settingSystemSubtitle').value.trim();
+      const ses = document.getElementById('settingSession').value.trim();
+      const newPin = document.getElementById('settingAdminPin').value.trim();
+      if (t) appState.settings.title = t;
+      if (s) appState.settings.subtitle = s;
+      if (ses) appState.settings.session = ses;
+      if (newPin) {
+        appState.settings.adminPin = newPin;
+        document.getElementById('settingAdminPin').value = '';
+      }
+      saveState();
+      applyIdentityHeader();
+      alert('Tetapan identiti sistem berjaya disimpan.');
+    }
+
+    // POPULATE DROPDOWNS
+    function populateSelectOptions() {
+      const classes = appState.classes;
+      const ubs = appState.units.ub;
+      const kps = appState.units.kp;
+      const sps = appState.units.sp;
+      const allUnits = [...ubs, ...kps, ...sps];
+
+      // Student filters
+      const fClass = document.getElementById('filterClassSelect');
+      const curClass = fClass.value;
+      fClass.innerHTML = '<option value="">Semua Kelas (' + classes.length + ')</option>' +
+        classes.map(c => `<option value="${c}">${c}</option>`).join('');
+      fClass.value = curClass;
+
+      const fUb = document.getElementById('filterUbSelect');
+      const curUb = fUb.value;
+      fUb.innerHTML = '<option value="">Semua Unit Beruniform</option>' +
+        ubs.map(u => `<option value="${u}">${u}</option>`).join('');
+      fUb.value = curUb;
+
+      const fKpSp = document.getElementById('filterKpSpSelect');
+      const curKpSp = fKpSp.value;
+      fKpSp.innerHTML = '<option value="">Semua Kelab / Sukan</option>' +
+        '<optgroup label="Kelab & Persatuan">' + kps.map(u => `<option value="${u}">${u}</option>`).join('') + '</optgroup>' +
+        '<optgroup label="Sukan & Permainan">' + sps.map(u => `<option value="${u}">${u}</option>`).join('') + '</optgroup>';
+      fKpSp.value = curKpSp;
+
+      // Student Modal Selects
+      document.getElementById('formStudentClass').innerHTML = classes.map(c => `<option value="${c}">${c}</option>`).join('');
+      document.getElementById('formStudentUb').innerHTML = '<option value="">-- Tiada --</option>' + ubs.map(u => `<option value="${u}">${u}</option>`).join('');
+      document.getElementById('formStudentKp').innerHTML = '<option value="">-- Tiada --</option>' + kps.map(u => `<option value="${u}">${u}</option>`).join('');
+      document.getElementById('formStudentSp').innerHTML = '<option value="">-- Tiada --</option>' + sps.map(u => `<option value="${u}">${u}</option>`).join('');
+
+      // Teacher Filter Unit
+      const fTUnit = document.getElementById('filterTeacherUnit');
+      fTUnit.innerHTML = '<option value="">Semua Unit (' + allUnits.length + ')</option>' +
+        allUnits.map(u => `<option value="${u}">${u}</option>`).join('');
+
+      // Attendance & OPR Week + Unit
+      const weeksHtml = Array.from({ length: 24 }, (_, i) => `<option value="Minggu ${i + 1}">Minggu ${i + 1}</option>`).join('');
+      const attW = document.getElementById('attWeekSelect');
+      if (!attW.innerHTML) attW.innerHTML = weeksHtml;
+      const oprW = document.getElementById('oprWeek');
+      if (!oprW.innerHTML) oprW.innerHTML = weeksHtml;
+
+      const unitGroupsHtml =
+        '<optgroup label="Unit Beruniform">' + ubs.map(u => `<option value="${u}">${u}</option>`).join('') + '</optgroup>' +
+        '<optgroup label="Kelab & Persatuan">' + kps.map(u => `<option value="${u}">${u}</option>`).join('') + '</optgroup>' +
+        '<optgroup label="Sukan & Permainan">' + sps.map(u => `<option value="${u}">${u}</option>`).join('') + '</optgroup>';
+
+      const attU = document.getElementById('attUnitSelect');
+      const curAttU = attU.value;
+      attU.innerHTML = unitGroupsHtml;
+      if (curAttU) attU.value = curAttU;
+
+      const oprU = document.getElementById('oprUnit');
+      const curOprU = oprU.value;
+      oprU.innerHTML = unitGroupsHtml;
+      if (curOprU) oprU.value = curOprU;
+
+      if (!document.getElementById('attDateInput').value) {
+        document.getElementById('attDateInput').value = new Date().toISOString().split('T')[0];
+      }
+      if (!document.getElementById('oprDate').value) {
+        document.getElementById('oprDate').value = new Date().toISOString().split('T')[0];
+      }
+    }
+
+    // RENDER DASHBOARD
+    function renderDashboard() {
+      const total = appState.students.length;
+      document.getElementById('kpiTotalStudents').textContent = total;
+      document.getElementById('kpiTotalClasses').textContent = `Merangkumi ${appState.classes.length} kelas aktif`;
+      const totalUnits = appState.units.ub.length + appState.units.kp.length + appState.units.sp.length;
+      document.getElementById('kpiTotalUnits').textContent = totalUnits;
+      document.getElementById('kpiTotalOpr').textContent = appState.oprs.length;
+
+      // Calculate attendance average
+      const attKeys = Object.keys(appState.attendance);
+      let totalPresent = 0, totalRecords = 0;
+      attKeys.forEach(k => {
+        const rec = appState.attendance[k].records || {};
+        Object.values(rec).forEach(st => {
+          totalRecords++;
+          if (st === 'H') totalPresent++;
+        });
+      });
+      const avgPct = totalRecords > 0 ? Math.round((totalPresent / totalRecords) * 100) : 100;
+      document.getElementById('kpiAvgAttendance').textContent = avgPct + '%';
+      document.getElementById('kpiAttendanceSessions').textContent = attKeys.length > 0 ? `${attKeys.length} sesi direkodkan` : 'Belum ada sesi direkodkan';
+
+      // Class breakdown
+      const classContainer = document.getElementById('classBreakdownList');
+      classContainer.innerHTML = appState.classes.map(cls => {
+        const count = appState.students.filter(s => s.kelas === cls).length;
+        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+        return `
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-bold">
+              <span class="text-slate-700">${cls}</span>
+              <span class="text-blue-900">${count} murid (${pct}%)</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div class="bg-blue-800 h-2 rounded-full" style="width: ${Math.max(pct * 2.5, count > 0 ? 4 : 0)}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Unit breakdown
+      const cat = document.getElementById('dashCategoryFilter').value;
+      let targetUnits = [];
+      if (cat === 'UB') targetUnits = appState.units.ub.map(u => ({ name: u, type: 'ub' }));
+      else if (cat === 'KP') targetUnits = appState.units.kp.map(u => ({ name: u, type: 'kp' }));
+      else if (cat === 'SP') targetUnits = appState.units.sp.map(u => ({ name: u, type: 'sp' }));
+      else {
+        targetUnits = [
+          ...appState.units.ub.map(u => ({ name: u, type: 'ub' })),
+          ...appState.units.kp.map(u => ({ name: u, type: 'kp' })),
+          ...appState.units.sp.map(u => ({ name: u, type: 'sp' }))
+        ];
+      }
+
+      const unitStats = targetUnits.map(u => {
+        const count = appState.students.filter(s => s[u.type] === u.name).length;
+        return { ...u, count };
+      }).sort((a, b) => b.count - a.count);
+
+      const maxUnitCount = Math.max(...unitStats.map(u => u.count), 1);
+      const colorMap = { ub: 'bg-indigo-700', kp: 'bg-emerald-600', sp: 'bg-amber-500' };
+
+      document.getElementById('unitBreakdownList').innerHTML = unitStats.map(u => {
+        const widthPct = Math.round((u.count / maxUnitCount) * 100);
+        return `
+          <div class="space-y-1">
+            <div class="flex justify-between text-xs font-bold">
+              <span class="text-slate-700 truncate pr-2">${u.name}</span>
+              <span class="text-slate-900 shrink-0">${u.count} ahli</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div class="${colorMap[u.type]} h-2 rounded-full" style="width: ${widthPct}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // RENDER STUDENTS TABLE
+    function renderStudentsTable() {
+      const q = document.getElementById('searchStudentInput').value.trim().toUpperCase();
+      const fClass = document.getElementById('filterClassSelect').value;
+      const fUb = document.getElementById('filterUbSelect').value;
+      const fKpSp = document.getElementById('filterKpSpSelect').value;
+
+      const filtered = appState.students.filter(s => {
+        if (q && !s.nama.includes(q) && !(s.ic || '').toUpperCase().includes(q)) return false;
+        if (fClass && s.kelas !== fClass) return false;
+        if (fUb && s.ub !== fUb) return false;
+        if (fKpSp && s.kp !== fKpSp && s.sp !== fKpSp) return false;
+        return true;
+      });
+
+      document.getElementById('studentCountLabel').textContent = `Memaparkan ${filtered.length} daripada ${appState.students.length} murid`;
+
+      const tbody = document.getElementById('studentsTableBody');
+      tbody.innerHTML = filtered.map((s, idx) => `
+        <tr class="hover:bg-blue-50/50 transition">
+          <td class="py-2.5 px-3 font-semibold text-slate-400">${idx + 1}</td>
+          <td class="py-2.5 px-3">
+            <button onclick="viewStudentProfile('${s.id}')" class="text-left font-bold text-blue-900 hover:underline">${s.nama}</button>
+            ${s.ic ? `<div class="text-[10px] text-slate-400">No. Pengenalan: ${s.ic}</div>` : ''}
+          </td>
+          <td class="py-2.5 px-3 font-bold text-slate-700 whitespace-nowrap">${s.kelas}</td>
+          <td class="py-2.5 px-3 text-slate-700">${s.ub || '<span class="text-slate-300">-</span>'}</td>
+          <td class="py-2.5 px-3 text-slate-700">${s.kp || '<span class="text-slate-300">-</span>'}</td>
+          <td class="py-2.5 px-3 text-slate-700">${s.sp || '<span class="text-slate-300">-</span>'}</td>
+          <td class="py-2.5 px-3 text-right whitespace-nowrap space-x-1">
+            <button onclick="viewStudentProfile('${s.id}')" class="px-2 py-1 text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg">Kad</button>
+            ${isAdminUnlocked ? `
+              <button onclick="openStudentModal('${s.id}')" class="px-2 py-1 text-[11px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 rounded-lg">Edit</button>
+              <button onclick="deleteStudent('${s.id}')" class="px-2 py-1 text-[11px] font-bold bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg">Padam</button>
+            ` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function resetStudentFilters() {
+      document.getElementById('searchStudentInput').value = '';
+      document.getElementById('filterClassSelect').value = '';
+      document.getElementById('filterUbSelect').value = '';
+      document.getElementById('filterKpSpSelect').value = '';
+      renderStudentsTable();
+    }
+
+    function openStudentModal(id = '') {
+      if (!requireAdmin()) return;
+      document.getElementById('editStudentId').value = id;
+      if (id) {
+        const s = appState.students.find(x => x.id === id);
+        document.getElementById('studentModalTitle').textContent = 'Kemaskini Maklumat Murid';
+        document.getElementById('formStudentName').value = s.nama;
+        document.getElementById('formStudentClass').value = s.kelas;
+        document.getElementById('formStudentIc').value = s.ic || '';
+        document.getElementById('formStudentUb').value = s.ub || '';
+        document.getElementById('formStudentKp').value = s.kp || '';
+        document.getElementById('formStudentSp').value = s.sp || '';
+      } else {
+        document.getElementById('studentModalTitle').textContent = 'Daftar Murid Baharu';
+        document.getElementById('formStudentName').value = '';
+        document.getElementById('formStudentIc').value = '';
+        document.getElementById('formStudentUb').value = '';
+        document.getElementById('formStudentKp').value = '';
+        document.getElementById('formStudentSp').value = '';
+      }
+      openModal('studentModal');
+    }
+
+    function saveStudentForm() {
+      if (!requireAdmin()) return;
+      const id = document.getElementById('editStudentId').value;
+      const nama = document.getElementById('formStudentName').value.trim().toUpperCase();
+      if (!nama) return alert('Sila masukkan nama murid.');
+      const payload = {
+        nama,
+        kelas: document.getElementById('formStudentClass').value,
+        ic: document.getElementById('formStudentIc').value.trim(),
+        ub: document.getElementById('formStudentUb').value,
+        kp: document.getElementById('formStudentKp').value,
+        sp: document.getElementById('formStudentSp').value
+      };
+      if (id) {
+        const idx = appState.students.findIndex(x => x.id === id);
+        if (idx !== -1) appState.students[idx] = { ...appState.students[idx], ...payload };
+      } else {
+        appState.students.unshift({ id: 'STU-' + Date.now(), ...payload });
+      }
+      saveState();
+      closeModal('studentModal');
+      renderAll();
+    }
+
+    function deleteStudent(id) {
+      if (!requireAdmin()) return;
+      if (!confirm('Padam rekod murid ini daripada sistem?')) return;
+      appState.students = appState.students.filter(s => s.id !== id);
+      saveState();
+      renderAll();
+    }
+
+    // KAD PROFIL MURID
+    function viewStudentProfile(id) {
+      const s = appState.students.find(x => x.id === id);
+      if (!s) return;
+
+      // Calculate attendance for this student across all weeks
+      let hadir = 0, jumlah = 0;
+      Object.values(appState.attendance).forEach(session => {
+        if (session.records && session.records[s.id]) {
+          jumlah++;
+          if (session.records[s.id] === 'H') hadir++;
+        }
+      });
+      const peratus = jumlah > 0 ? Math.round((hadir / jumlah) * 100) + '%' : 'Tiada rekod lagi';
+
+      const logoHtml = appState.settings.logoDataUrl
+        ? `<img src="${appState.settings.logoDataUrl}" class="w-14 h-14 object-contain" />`
+        : `<div class="w-14 h-14 rounded-xl bg-blue-900 text-amber-300 font-extrabold flex items-center justify-center text-base">SKB</div>`;
+
+      document.getElementById('profileCardContent').innerHTML = `
+        <div class="flex items-center gap-4 border-b-2 border-slate-800 pb-3">
+          ${logoHtml}
+          <div>
+            <h4 class="text-sm font-extrabold uppercase text-slate-900">${appState.settings.title}</h4>
+            <p class="text-[11px] text-slate-600">${appState.settings.subtitle}</p>
+            <p class="text-[11px] font-bold text-blue-900 mt-0.5">KAD REKOD PENGLIBATAN KOKURIKULUM MURID (${appState.settings.session})</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+          <div><span class="text-slate-500 block text-[10px] uppercase">Nama Penuh Murid</span><span class="font-extrabold text-slate-900">${s.nama}</span></div>
+          <div><span class="text-slate-500 block text-[10px] uppercase">Tahun / Kelas</span><span class="font-extrabold text-slate-900">${s.kelas}</span></div>
+          <div><span class="text-slate-500 block text-[10px] uppercase">No. Pengenalan / MyKid</span><span class="font-bold text-slate-800">${s.ic || '-'}</span></div>
+          <div><span class="text-slate-500 block text-[10px] uppercase">Rekod Kehadiran</span><span class="font-extrabold text-emerald-700">${hadir}/${jumlah} (${peratus})</span></div>
+        </div>
+        <table class="w-full border-collapse border border-slate-300 text-xs">
+          <thead>
+            <tr class="bg-slate-100">
+              <th class="border border-slate-300 p-2 text-left">Bidang Kokurikulum</th>
+              <th class="border border-slate-300 p-2 text-left">Unit / Kelab / Sukan Berdaftar</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="border border-slate-300 p-2 font-bold">1. Unit Beruniform</td><td class="border border-slate-300 p-2 font-semibold">${s.ub || 'Tiada'}</td></tr>
+            <tr><td class="border border-slate-300 p-2 font-bold">2. Kelab dan Persatuan</td><td class="border border-slate-300 p-2 font-semibold">${s.kp || 'Tiada'}</td></tr>
+            <tr><td class="border border-slate-300 p-2 font-bold">3. Sukan dan Permainan</td><td class="border border-slate-300 p-2 font-semibold">${s.sp || 'Tiada'}</td></tr>
+          </tbody>
+        </table>
+        <div class="pt-6 grid grid-cols-2 gap-8 text-[11px] text-slate-600">
+          <div>
+            <div class="border-b border-slate-400 h-8"></div>
+            <p class="mt-1 font-bold">Tandatangan Setiausaha Kokurikulum</p>
+          </div>
+          <div>
+            <div class="border-b border-slate-400 h-8"></div>
+            <p class="mt-1 font-bold">Pengesahan GPK Kokurikulum SK Beserah</p>
+          </div>
+        </div>
+      `;
+      openModal('profileModal');
+    }
+
+    function printProfileCard() {
+      const printArea = document.getElementById('printArea');
+      printArea.innerHTML = document.getElementById('profileCardContent').innerHTML;
+      printArea.classList.remove('hidden');
+      window.print();
+      printArea.classList.add('hidden');
+    }
+
+    // GURU PENASIHAT
+    function populateTeacherUnitOptions() {
+      const cat = document.getElementById('formTeacherCat').value;
+      let list = appState.units.ub;
+      if (cat === 'Kelab & Persatuan') list = appState.units.kp;
+      if (cat === 'Sukan & Permainan') list = appState.units.sp;
+      document.getElementById('formTeacherUnit').innerHTML = list.map(u => `<option value="${u}">${u}</option>`).join('');
+    }
+
+    function renderTeachersSection() {
+      const q = document.getElementById('searchTeacherInput').value.trim().toUpperCase();
+      const cat = document.getElementById('filterTeacherCat').value;
+      const unit = document.getElementById('filterTeacherUnit').value;
+
+      const filtered = appState.teachers.filter(t => {
+        if (q && !t.nama.toUpperCase().includes(q) && !t.unit.toUpperCase().includes(q)) return false;
+        if (cat && t.kategori !== cat) return false;
+        if (unit && t.unit !== unit) return false;
+        return true;
+      });
+
+      document.getElementById('teachersTableBody').innerHTML = filtered.map((t, idx) => `
+        <tr class="hover:bg-slate-50">
+          <td class="py-2.5 px-3 text-slate-400 font-semibold">${idx + 1}</td>
+          <td class="py-2.5 px-3 font-bold text-slate-900">${t.nama}</td>
+          <td class="py-2.5 px-3 font-semibold text-blue-900">${t.jawatan}</td>
+          <td class="py-2.5 px-3 text-slate-600">${t.kategori}</td>
+          <td class="py-2.5 px-3 font-bold text-slate-800">${t.unit}</td>
+          <td class="py-2.5 px-3 text-slate-600">${t.telefon || '-'}</td>
+          <td class="py-2.5 px-3 text-right whitespace-nowrap space-x-1">
+            ${isAdminUnlocked ? `
+              <button onclick="openTeacherModal('${t.id}')" class="px-2 py-1 text-[11px] font-bold bg-amber-100 text-amber-900 rounded-lg">Edit</button>
+              <button onclick="deleteTeacher('${t.id}')" class="px-2 py-1 text-[11px] font-bold bg-rose-100 text-rose-800 rounded-lg">Padam</button>
+            ` : '<span class="text-[11px] text-slate-400">Terkunci</span>'}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openTeacherModal(id = '') {
+      if (!requireAdmin()) return;
+      document.getElementById('editTeacherId').value = id;
+      if (id) {
+        const t = appState.teachers.find(x => x.id === id);
+        document.getElementById('teacherModalTitle').textContent = 'Edit Guru Penasihat';
+        document.getElementById('formTeacherName').value = t.nama;
+        document.getElementById('formTeacherRole').value = t.jawatan;
+        document.getElementById('formTeacherPhone').value = t.telefon || '';
+        document.getElementById('formTeacherCat').value = t.kategori;
+        populateTeacherUnitOptions();
+        document.getElementById('formTeacherUnit').value = t.unit;
+      } else {
+        document.getElementById('teacherModalTitle').textContent = 'Tambah Guru Penasihat';
+        document.getElementById('formTeacherName').value = '';
+        document.getElementById('formTeacherPhone').value = '';
+        document.getElementById('formTeacherCat').value = 'Unit Beruniform';
+        populateTeacherUnitOptions();
+      }
+      openModal('teacherModal');
+    }
+
+    function saveTeacherForm() {
+      if (!requireAdmin()) return;
+      const id = document.getElementById('editTeacherId').value;
+      const nama = document.getElementById('formTeacherName').value.trim().toUpperCase();
+      if (!nama) return alert('Sila masukkan nama guru.');
+      const payload = {
+        nama,
+        jawatan: document.getElementById('formTeacherRole').value,
+        telefon: document.getElementById('formTeacherPhone').value.trim(),
+        kategori: document.getElementById('formTeacherCat').value,
+        unit: document.getElementById('formTeacherUnit').value
+      };
+      if (id) {
+        const idx = appState.teachers.findIndex(x => x.id === id);
+        if (idx !== -1) appState.teachers[idx] = { ...appState.teachers[idx], ...payload };
+      } else {
+        appState.teachers.push({ id: 'TCH-' + Date.now(), ...payload });
+      }
+      saveState();
+      closeModal('teacherModal');
+      renderTeachersSection();
+      renderOprPreview();
+    }
+
+    function deleteTeacher(id) {
+      if (!requireAdmin()) return;
+      if (!confirm('Padam rekod guru penasihat ini?')) return;
+      appState.teachers = appState.teachers.filter(t => t.id !== id);
+      saveState();
+      renderTeachersSection();
+    }
+
+    // KEHADIRAN MURID
+    function getUnitMembers(unitName) {
+      return appState.students.filter(s => s.ub === unitName || s.kp === unitName || s.sp === unitName);
+    }
+
+    function renderAttendanceList() {
+      const week = document.getElementById('attWeekSelect').value;
+      const unit = document.getElementById('attUnitSelect').value;
+      const members = getUnitMembers(unit);
+      const key = `${week}__${unit}`;
+      const existing = appState.attendance[key] || { date: document.getElementById('attDateInput').value, records: {} };
+
+      if (existing.date) document.getElementById('attDateInput').value = existing.date;
+
+      let hCount = 0, thCount = 0, bCount = 0;
+      members.forEach(m => {
+        const st = existing.records[m.id] || 'H';
+        if (st === 'H') hCount++;
+        else if (st === 'TH') thCount++;
+        else if (st === 'B') bCount++;
+      });
+
+      const pct = members.length > 0 ? Math.round((hCount / members.length) * 100) : 0;
+      document.getElementById('attendanceSummaryBar').innerHTML = `
+        <span>Unit: ${unit} (${week})</span>
+        <span>Jumlah Ahli: ${members.length} | Hadir: ${hCount} | Tidak Hadir: ${thCount} | Bersebab: ${bCount} (${pct}%)</span>
+      `;
+
+      document.getElementById('attendanceTableBody').innerHTML = members.map((m, idx) => {
+        const st = existing.records[m.id] || 'H';
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="py-2 px-3 text-slate-400 font-semibold">${idx + 1}</td>
+            <td class="py-2 px-3 font-bold text-slate-800">${m.nama}</td>
+            <td class="py-2 px-3 font-semibold text-slate-600">${m.kelas}</td>
+            <td class="py-2 px-3 text-center">
+              <div class="inline-flex rounded-lg border border-slate-300 overflow-hidden text-[11px] font-bold">
+                <button type="button" onclick="setSingleAttendance('${m.id}','H')" class="px-2.5 py-1 ${st === 'H' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-600'}">Hadir</button>
+                <button type="button" onclick="setSingleAttendance('${m.id}','TH')" class="px-2.5 py-1 border-x border-slate-300 ${st === 'TH' ? 'bg-rose-600 text-white' : 'bg-white text-slate-600'}">Tidak Hadir</button>
+                <button type="button" onclick="setSingleAttendance('${m.id}','B')" class="px-2.5 py-1 ${st === 'B' ? 'bg-amber-500 text-white' : 'bg-white text-slate-600'}">Bersebab</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function setSingleAttendance(studentId, status) {
+      if (!requireAdmin()) return;
+      const week = document.getElementById('attWeekSelect').value;
+      const unit = document.getElementById('attUnitSelect').value;
+      const key = `${week}__${unit}`;
+      if (!appState.attendance[key]) {
+        appState.attendance[key] = { date: document.getElementById('attDateInput').value, records: {} };
+      }
+      appState.attendance[key].records[studentId] = status;
+      renderAttendanceList();
+    }
+
+    function markAllAttendance(status) {
+      if (!requireAdmin()) return;
+      const week = document.getElementById('attWeekSelect').value;
+      const unit = document.getElementById('attUnitSelect').value;
+      const members = getUnitMembers(unit);
+      const key = `${week}__${unit}`;
+      if (!appState.attendance[key]) {
+        appState.attendance[key] = { date: document.getElementById('attDateInput').value, records: {} };
+      }
+      members.forEach(m => { appState.attendance[key].records[m.id] = status; });
+      renderAttendanceList();
+    }
+
+    function saveCurrentAttendance() {
+      if (!requireAdmin()) return;
+      const week = document.getElementById('attWeekSelect').value;
+      const unit = document.getElementById('attUnitSelect').value;
+      const members = getUnitMembers(unit);
+      const key = `${week}__${unit}`;
+      if (!appState.attendance[key]) {
+        appState.attendance[key] = { date: document.getElementById('attDateInput').value, records: {} };
+      }
+      appState.attendance[key].date = document.getElementById('attDateInput').value;
+      members.forEach(m => {
+        if (!appState.attendance[key].records[m.id]) appState.attendance[key].records[m.id] = 'H';
+      });
+      saveState();
+      renderDashboard();
+      renderOprPreview();
+      alert(`Rekod kehadiran ${unit} (${week}) berjaya disimpan!`);
+    }
+
+    // LAPORAN MINGGUAN (ONE PAGE REPORT - OPR)
+    function handleOprImages(e) {
+      const files = Array.from(e.target.files).slice(0, 3);
+      currentOprImages = [];
+      let loaded = 0;
+      files.forEach(f => {
+        const reader = new FileReader();
+        reader.onload = evt => {
+          currentOprImages.push(evt.target.result);
+          loaded++;
+          if (loaded === files.length) renderOprPreview();
+        };
+        reader.readAsDataURL(f);
+      });
+    }
+
+    function syncOprStats() {
+      renderOprPreview();
+    }
+
+    function getOprComputedData() {
+      const week = document.getElementById('oprWeek').value;
+      const date = document.getElementById('oprDate').value;
+      const unit = document.getElementById('oprUnit').value;
+      const time = document.getElementById('oprTime').value;
+      const venue = document.getElementById('oprVenue').value;
+      const title = document.getElementById('oprTitle').value || 'Perjumpaan Mingguan Kokurikulum';
+      const objective = document.getElementById('oprObjective').value || 'Meningkatkan kemahiran asas, disiplin, dan kerjasama berpasukan dalam kalangan ahli.';
+      const summary = document.getElementById('oprSummary').value || 'Perjumpaan dijalankan mengikut takwim kokurikulum sekolah dengan bimbingan guru penasihat.';
+      const reflection = document.getElementById('oprReflection').value;
+
+      const members = getUnitMembers(unit);
+      const key = `${week}__${unit}`;
+      const attRec = appState.attendance[key]?.records || {};
+      let present = 0;
+      members.forEach(m => {
+        const st = attRec[m.id] || 'H';
+        if (st === 'H') present++;
+      });
+      const total = members.length;
+      const pct = total > 0 ? Math.round((present / total) * 100) : 0;
+
+      const unitTeachers = appState.teachers.filter(t => t.unit === unit);
+      const teacherNames = unitTeachers.length > 0
+        ? unitTeachers.map(t => `${t.nama} (${t.jawatan})`).join(', ')
+        : 'Semua Guru Penasihat Unit';
+
+      return { week, date, unit, time, venue, title, objective, summary, reflection, present, total, pct, teacherNames, images: currentOprImages };
+    }
+
+    function renderOprPreview() {
+      const d = getOprComputedData();
+      document.getElementById('oprAutoStatsBadge').textContent = `Kehadiran: ${d.present}/${d.total} (${d.pct}%)`;
+
+      const logoHtml = appState.settings.logoDataUrl
+        ? `<img src="${appState.settings.logoDataUrl}" class="w-12 h-12 object-contain" />`
+        : `<div class="w-12 h-12 rounded-xl bg-blue-900 text-amber-300 font-extrabold flex items-center justify-center text-sm">SKB</div>`;
+
+      const photosHtml = d.images.length > 0
+        ? `<div class="grid grid-cols-${d.images.length} gap-2 pt-1">${d.images.map(src => `<img src="${src}" class="w-full h-32 object-cover rounded-lg border border-slate-300" />`).join('')}</div>`
+        : `<div class="border border-dashed border-slate-300 rounded-lg p-4 text-center text-[11px] text-slate-400">Ruangan Gambar Aktiviti (Muat naik hingga 3 keping gambar di borang sebelah)</div>`;
+
+      document.getElementById('oprPreviewBox').innerHTML = `
+        <div class="flex items-center gap-3 border-b-2 border-blue-900 pb-2.5">
+          ${logoHtml}
+          <div class="flex-1">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-blue-900">One Page Report (OPR) Kokurikulum • ${appState.settings.session}</p>
+            <h4 class="text-sm font-extrabold uppercase text-slate-900">${appState.settings.title}</h4>
+            <p class="text-[10px] text-slate-500">${appState.settings.subtitle}</p>
+          </div>
+          <div class="text-right">
+            <span class="px-2.5 py-1 bg-blue-900 text-white font-extrabold rounded text-[11px]">${d.week}</span>
+          </div>
+        </div>
+
+        <table class="w-full border-collapse border border-slate-300 text-[11px]">
+          <tr>
+            <td class="border border-slate-300 p-1.5 bg-slate-100 font-bold w-1/4">Unit Kokurikulum</td>
+            <td class="border border-slate-300 p-1.5 font-extrabold text-blue-950" colspan="3">${d.unit}</td>
+          </tr>
+          <tr>
+            <td class="border border-slate-300 p-1.5 bg-slate-100 font-bold">Tarikh / Hari</td>
+            <td class="border border-slate-300 p-1.5">${d.date || '-'}</td>
+            <td class="border border-slate-300 p-1.5 bg-slate-100 font-bold w-1/5">Masa</td>
+            <td class="border border-slate-300 p-1.5">${d.time}</td>
+          </tr>
+          <tr>
+            <td class="border border-slate-300 p-1.5 bg-slate-100 font-bold">Tempat</td>
+            <td class="border border-slate-300 p-1.5">${d.venue}</td>
+            <td class="border border-slate-300 p-1.5 bg-slate-100 font-bold">Kehadiran Ahli</td>
+            <td class="border border-slate-300 p-1.5 font-extrabold text-emerald-700">${d.present} / ${d.total} (${d.pct}%)</td>
+          </tr>
+          <tr>
+            <td class="border border-slate-300 p-1.5 bg-slate-100 font-bold">Guru Penasihat</td>
+            <td class="border border-slate-300 p-1.5" colspan="3">${d.teacherNames}</td>
+          </tr>
+          <tr>
+            <td class="border border-slate-300 p-1.5 bg-slate-100 font-bold">Tajuk Aktiviti</td>
+            <td class="border border-slate-300 p-1.5 font-bold" colspan="3">${d.title}</td>
+          </tr>
+          <tr>
+            <td class="border border-slate-300 p-1.5 bg-slate-100 font-bold">Objektif</td>
+            <td class="border border-slate-300 p-1.5 whitespace-pre-line" colspan="3">${d.objective}</td>
+          </tr>
+          <tr>
+            <td class="border border-slate-300 p-1.5 bg-slate-100 font-bold">Ringkasan Aktiviti</td>
+            <td class="border border-slate-300 p-1.5 whitespace-pre-line" colspan="3">${d.summary}</td>
+          </tr>
+          <tr>
+            <td class="border border-slate-300 p-1.5 bg-slate-100 font-bold">Impak / Refleksi</td>
+            <td class="border border-slate-300 p-1.5" colspan="3">${d.reflection}</td>
+          </tr>
+        </table>
+
+        <div>
+          <p class="text-[10px] font-bold uppercase text-slate-600 mb-1">Laporan Bergambar Aktiviti:</p>
+          ${photosHtml}
+        </div>
+
+        <div class="grid grid-cols-2 gap-8 pt-6 text-[10px] text-slate-700">
+          <div>
+            <p class="mb-6">Disediakan oleh:</p>
+            <div class="border-b border-slate-400"></div>
+            <p class="font-bold mt-1">Setiausaha / Ketua Guru Penasihat</p>
+            <p>${d.unit}</p>
+          </div>
+          <div>
+            <p class="mb-6">Disahkan oleh:</p>
+            <div class="border-b border-slate-400"></div>
+            <p class="font-bold mt-1">Guru Penolong Kanan Kokurikulum</p>
+            <p>SK Beserah</p>
+          </div>
+        </div>
+      `;
+    }
+
+    function saveOprReport() {
+      if (!requireAdmin()) return;
+      const d = getOprComputedData();
+      appState.oprs.unshift({ id: 'OPR-' + Date.now(), ...d });
+      saveState();
+      renderDashboard();
+      renderSavedOprList();
+      alert('Laporan Mingguan (OPR) berjaya disimpan ke arkib!');
+    }
+
+    function renderSavedOprList() {
+      const container = document.getElementById('savedOprList');
+      if (appState.oprs.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-400">Belum ada laporan OPR disimpan.</p>';
+        return;
+      }
+      container.innerHTML = appState.oprs.map(o => `
+        <div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs">
+          <div>
+            <p class="font-extrabold text-slate-800">${o.week} • ${o.unit}</p>
+            <p class="text-[11px] text-slate-500">${o.title} (${o.date || '-'}) • Kehadiran: ${o.present}/${o.total} (${o.pct}%)</p>
+          </div>
+          <div class="flex gap-1.5">
+            <button onclick="loadOprToPreview('${o.id}')" class="px-2.5 py-1 font-bold bg-blue-100 text-blue-900 rounded-lg">Papar</button>
+            ${isAdminUnlocked ? `<button onclick="deleteOpr('${o.id}')" class="px-2.5 py-1 font-bold bg-rose-100 text-rose-800 rounded-lg">Padam</button>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function loadOprToPreview(id) {
+      const o = appState.oprs.find(x => x.id === id);
+      if (!o) return;
+      document.getElementById('oprWeek').value = o.week;
+      document.getElementById('oprDate').value = o.date;
+      document.getElementById('oprUnit').value = o.unit;
+      document.getElementById('oprTime').value = o.time;
+      document.getElementById('oprVenue').value = o.venue;
+      document.getElementById('oprTitle').value = o.title;
+      document.getElementById('oprObjective').value = o.objective;
+      document.getElementById('oprSummary').value = o.summary;
+      document.getElementById('oprReflection').value = o.reflection;
+      currentOprImages = o.images || [];
+      renderOprPreview();
+    }
+
+    function deleteOpr(id) {
+      if (!requireAdmin()) return;
+      if (!confirm('Padam laporan OPR ini?')) return;
+      appState.oprs = appState.oprs.filter(x => x.id !== id);
+      saveState();
+      renderDashboard();
+      renderSavedOprList();
+    }
+
+    function printCurrentOpr() {
+      const printArea = document.getElementById('printArea');
+      printArea.innerHTML = document.getElementById('oprPreviewBox').innerHTML;
+      printArea.classList.remove('hidden');
+      window.print();
+      printArea.classList.add('hidden');
+    }
+
+    // PENGURUSAN KELAS
+    function renderClassManager() {
+      const container = document.getElementById('classManagerList');
+      container.innerHTML = appState.classes.map((cls, idx) => {
+        const count = appState.students.filter(s => s.kelas === cls).length;
+        return `
+          <div class="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs">
+            <div>
+              <span class="font-extrabold text-slate-800">${cls}</span>
+              <span class="ml-2 text-[11px] text-slate-500">(${count} murid)</span>
+            </div>
+            ${isAdminUnlocked ? `
+              <div class="flex gap-1.5">
+                <button onclick="renameClass(${idx})" class="px-2.5 py-1 font-bold bg-amber-100 text-amber-900 rounded-lg">Edit Nama</button>
+                <button onclick="deleteClass(${idx})" class="px-2.5 py-1 font-bold bg-rose-100 text-rose-800 rounded-lg">Padam</button>
+              </div>
+            ` : '<span class="text-[11px] text-slate-400">Terkunci</span>'}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function addNewClass() {
+      if (!requireAdmin()) return;
+      const val = document.getElementById('newClassInput').value.trim().toUpperCase();
+      if (!val) return;
+      if (appState.classes.includes(val)) return alert('Nama kelas sudah wujud.');
+      appState.classes.push(val);
+      document.getElementById('newClassInput').value = '';
+      saveState();
+      renderAll();
+    }
+
+    function renameClass(idx) {
+      if (!requireAdmin()) return;
+      const oldName = appState.classes[idx];
+      const newName = prompt(`Masukkan nama baharu untuk kelas "${oldName}":`, oldName);
+      if (!newName) return;
+      const cleanNew = newName.trim().toUpperCase();
+      if (!cleanNew || cleanNew === oldName) return;
+      appState.classes[idx] = cleanNew;
+      appState.students.forEach(s => {
+        if (s.kelas === oldName) s.kelas = cleanNew;
+      });
+      saveState();
+      renderAll();
+    }
+
+    function deleteClass(idx) {
+      if (!requireAdmin()) return;
+      const cls = appState.classes[idx];
+      const count = appState.students.filter(s => s.kelas === cls).length;
+      if (count > 0) return alert(`Kelas "${cls}" masih mempunyai ${count} orang murid. Sila pindahkan murid terlebih dahulu.`);
+      appState.classes.splice(idx, 1);
+      saveState();
+      renderAll();
+    }
+
+    // IMPORT EXCEL / CSV (SHEETJS)
+    function handleExcelImport(e) {
+      if (!requireAdmin()) return;
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        let importedCount = 0;
+        workbook.SheetNames.forEach(sheetName => {
+          const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+          rows.forEach(r => {
+            const nama = (r.NAMA || r.Nama || r.nama || '').toString().trim().toUpperCase();
+            const kelas = (r.KELAS || r.Kelas || r.kelas || '').toString().trim().toUpperCase();
+            if (nama && nama !== 'NAMA') {
+              const existing = appState.students.find(s => s.nama === nama);
+              const ub = (r['UNIT BERUNIFORM'] || r.UB || '').toString().trim();
+              const kp = (r['KELAB PERSATUAN'] || r.KP || '').toString().trim();
+              const sp = (r['SUKAN PERMAINAN'] || r.SP || '').toString().trim();
+              if (kelas && !appState.classes.includes(kelas)) appState.classes.push(kelas);
+              if (existing) {
+                if (kelas) existing.kelas = kelas;
+                if (ub) existing.ub = ub;
+                if (kp) existing.kp = kp;
+                if (sp) existing.sp = sp;
+              } else {
+                appState.students.push({
+                  id: 'STU-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+                  nama,
+                  kelas: kelas || appState.classes[0],
+                  ic: (r.IC || r.MYKID || '').toString().trim(),
+                  ub, kp, sp
+                });
+              }
+              importedCount++;
+            }
+          });
+        });
+        saveState();
+        renderAll();
+        alert(`Berjaya mengimport / mengemas kini ${importedCount} rekod murid!`);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // EKSPORT CSV & SANDARAN JSON
+    function downloadFile(filename, content, mime = 'text/csv;charset=utf-8;') {
+      const blob = new Blob(['\uFEFF' + content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportStudentsCSV() {
+      const header = 'BIL,NAMA,KELAS,NO_PENGENALAN,UNIT_BERUNIFORM,KELAB_PERSATUAN,SUKAN_PERMAINAN\n';
+      const rows = appState.students.map((s, i) =>
+        [i + 1, `"${s.nama}"`, `"${s.kelas}"`, `"${s.ic || ''}"`, `"${s.ub}"`, `"${s.kp}"`, `"${s.sp}"`].join(',')
+      ).join('\n');
+      downloadFile('Data_Murid_Kokurikulum_SK_Beserah.csv', header + rows);
+    }
+
+    function exportTeachersCSV() {
+      const header = 'BIL,NAMA_GURU,JAWATAN,KATEGORI,UNIT,TELEFON\n';
+      const rows = appState.teachers.map((t, i) =>
+        [i + 1, `"${t.nama}"`, `"${t.jawatan}"`, `"${t.kategori}"`, `"${t.unit}"`, `"${t.telefon || ''}"`].join(',')
+      ).join('\n');
+      downloadFile('Senarai_Guru_Penasihat_SK_Beserah.csv', header + rows);
+    }
+
+    function exportSummaryCSV() {
+      const header = 'KELAS,JUMLAH_MURID\n';
+      const rows = appState.classes.map(c => `"${c}",${appState.students.filter(s => s.kelas === c).length}`).join('\n');
+      downloadFile('Laporan_Enrolmen_Kelas_SK_Beserah.csv', header + rows);
+    }
+
+    function downloadBackupJSON() {
+      downloadFile('Sandaran_Sistem_Kokurikulum_SK_Beserah.json', JSON.stringify(appState, null, 2), 'application/json');
+    }
+
+    function restoreBackupJSON(e) {
+      if (!requireAdmin()) return;
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          if (!parsed.students || !parsed.settings) throw new Error('Format tidak sah');
+          appState = parsed;
+          saveState();
+          renderAll();
+          alert('Sandaran JSON berjaya dipulihkan!');
+        } catch (err) {
+          alert('Gagal memulihkan fail sandaran.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetToDefault2026() {
+      if (!requireAdmin()) return;
+      if (!confirm('Set semula semua data kepada rekod asal 2026 (386 murid)?')) return;
+      appState = buildInitialState();
+      saveState();
+      renderAll();
+      alert('Sistem telah ditetapkan semula kepada data asal 2026.');
+    }
+
+    function renderAll() {
+      applyIdentityHeader();
+      populateSelectOptions();
+      renderDashboard();
+      renderStudentsTable();
+      renderTeachersSection();
+      renderAttendanceList();
+      renderOprPreview();
+      renderSavedOprList();
+      renderClassManager();
+    }
+
+    // INISIALISASI
+    renderAll();
+  </script>
+</body>
+</html>
